@@ -1,0 +1,88 @@
+#cloud-config
+# --- USERS ---
+users:
+  - default
+
+  # Generic human user account
+  - name: genericbcuser
+    gecos: Generic Linux Blessing Consulting User 
+    groups: [sudo]
+    shell: /bin/bash
+    sudo: "ALL=(ALL) NOPASSWD:ALL"
+    lock_passwd: false
+    ssh_authorized_keys:
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILrWSFBA3/5MKjubnwl6NGd3TytWnz0NOruyiFOPtnaz
+
+  # Service account (no sudo, no shell)
+  - name: svcbcappuser
+    gecos: Application Service Account
+    groups: []
+    shell: /bin/bash
+    sudo: ""
+    lock_passwd: true
+    ssh_authorized_keys: []
+
+# --- SSH CONFIGURATION ---
+ssh_pwauth: false   # disable password auth (optional but recommended)
+
+write_files:
+  # Disable root login
+  - path: /etc/ssh/sshd_config.d/disable_root.conf
+    permissions: '0644'
+    content: |
+      PermitRootLogin no
+
+  # Change SSH port to 2222
+  - path: /etc/ssh/sshd_config.d/port_change.conf
+    permissions: '0644'
+    content: |
+      Port 2222
+
+runcmd:
+  - systemctl restart sshd
+
+# --- INSTALL & CONFIGURE FAIL2BAN ---
+packages:
+  - fail2ban
+
+write_files:
+  - path: /etc/fail2ban/jail.local
+    permissions: '0644'
+    content: |
+      [sshd]
+      enabled = true
+      port = 2222
+      filter = sshd
+      backend = systemd
+      maxretry = 5
+      bantime = 10m
+      findtime = 10m
+
+# --- RUNCMD SECTION ---
+runcmd:
+  # --- SSH ---
+  - sed -i '/^Port /d' /etc/ssh/sshd_config              # Remove any existing Port lines
+  - systemctl restart sshd
+
+  # --- VOLUME MOUNT /data USING UUID ---
+  - mkdir -p /data
+  - |
+      # Format device if empty
+      if ! blkid /dev/sdb; then
+        mkfs.ext4 -F /dev/sdb
+      fi
+  - |
+      # Get UUID
+      UUID=$(blkid -s UUID -o value /dev/sdb)
+      # Add to fstab if not already there
+      grep -q "$UUID" /etc/fstab || echo "UUID=$UUID /data ext4 defaults,nofail 0 2" >> /etc/fstab
+  - mount -a
+
+  # --- CREATE SUBFOLDERS AND SET OWNERSHIP ---
+  - mkdir -p /data/app /data/logs
+  - chown -R appsvc:appsvc /data
+  - chmod 755 /data /data/app /data/logs
+
+  # --- FAIL2BAN ---
+  - systemctl enable fail2ban
+  - systemctl restart fail2ban
