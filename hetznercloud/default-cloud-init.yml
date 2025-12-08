@@ -1,0 +1,66 @@
+#cloud-config
+# --- USERS ---
+users:
+  - default
+
+  # Generic human user account
+  - name: genericuser
+    gecos: Generic User 
+    groups: [sudo]
+    shell: /bin/bash
+    sudo: "ALL=(ALL) NOPASSWD:ALL"
+    lock_passwd: false
+    ssh_authorized_keys:
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILrWSFBA3/5MKjubnwl6NGd3TytWnz0NOruyiFOPtnaz
+
+  # Service account (no sudo, no shell)
+  - name: svcapp
+    gecos: Application Service Account
+    groups: []
+    shell: /usr/sbin/nologin
+    sudo: ""
+    lock_passwd: true
+    ssh_authorized_keys: []
+
+
+# --- SSH CONFIGURATION ---
+ssh_pwauth: false   # disable password auth (optional but recommended)
+
+write_files:
+  # Disable root login
+  - path: /etc/ssh/sshd_config.d/disable_root.conf
+    permissions: '0644'
+    content: |
+      PermitRootLogin no
+
+  # Change SSH port to 2222
+  - path: /etc/ssh/sshd_config.d/port_change.conf
+    permissions: '0644'
+    content: |
+      Port 2222
+
+runcmd:
+  - systemctl restart sshd
+
+
+# --- INSTALL & CONFIGURE FAIL2BAN ---
+packages:
+  - fail2ban
+
+write_files:
+  - path: /etc/fail2ban/jail.local
+    permissions: '0644'
+    content: |
+      [sshd]
+      enabled = true
+      port = 2222
+      filter = sshd
+      backend = systemd
+      maxretry = 5
+      bantime = 10m
+      findtime = 10m
+
+runcmd:
+  - systemctl enable fail2ban
+  - systemctl restart fail2ban
+
