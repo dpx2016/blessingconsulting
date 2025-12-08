@@ -4,8 +4,8 @@ users:
   - default
 
   # Generic human user account
-  - name: genericuser
-    gecos: Generic User 
+  - name: genericbcuser
+    gecos: Generic Linux Blessing Consulting User 
     groups: [sudo]
     shell: /bin/bash
     sudo: "ALL=(ALL) NOPASSWD:ALL"
@@ -14,7 +14,7 @@ users:
       - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILrWSFBA3/5MKjubnwl6NGd3TytWnz0NOruyiFOPtnaz
 
   # Service account (no sudo, no shell)
-  - name: svcapp
+  - name: svcbcappuser
     gecos: Application Service Account
     groups: []
     shell: /usr/sbin/nologin
