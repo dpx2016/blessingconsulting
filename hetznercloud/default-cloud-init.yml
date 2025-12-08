@@ -17,7 +17,7 @@ users:
   - name: svcbcappuser
     gecos: Application Service Account
     groups: []
-    shell: /usr/sbin/nologin
+    shell: /bin/bash
     sudo: ""
     lock_passwd: true
     ssh_authorized_keys: []
