@@ -32,7 +32,6 @@ packages:
 write_files:
   - path: /etc/fail2ban/jail.local
     permissions: '0644'
-    owner: root:root
     content: |
       [sshd]
       enabled = true
@@ -48,27 +47,37 @@ write_files:
 
 # --- RUNCMD ---
 runcmd:
-  # Ensure no conflicting PermitRootLogin lines exist
+  # Ensure root login is disabled
   - sed -i '/^PermitRootLogin/d' /etc/ssh/sshd_config
   - echo "PermitRootLogin no" >> /etc/ssh/sshd_config
   - systemctl restart sshd
 
-  # --- MOUNT /dev/sdb ON /data ---
+  # --- HETZNER CLOUD VOLUME AUTO-MOUNT ---
   - mkdir -p /data
   - |
-      if ! blkid /dev/sdb; then
-        mkfs.ext4 -F /dev/sdb
-      fi
-  - |
-      UUID=$(blkid -s UUID -o value /dev/sdb)
-      grep -q "$UUID" /etc/fstab || echo "UUID=$UUID /data ext4 defaults,nofail 0 2" >> /etc/fstab
-  - mount -a
+      # Detect the first unmounted non-root device
+      DISK=$(lsblk -ndo NAME,TYPE,MOUNTPOINT | awk '$2=="disk" && $3=="" {print "/dev/"$1; exit}')
+      echo "Detected Hetzner volume: $DISK"
 
-  # Create structure & permissions
+      if [ -n "$DISK" ]; then
+        # Format if empty
+        if ! blkid $DISK; then
+          mkfs.ext4 -F $DISK
+        fi
+
+        # Get UUID and mount persistently
+        UUID=$(blkid -s UUID -o value $DISK)
+        grep -q "$UUID" /etc/fstab || echo "UUID=$UUID /data ext4 defaults,nofail 0 2" >> /etc/fstab
+        mount -a
+      else
+        echo "No unmounted Hetzner volume detected"
+      fi
+
+  # --- CREATE SUBFOLDERS AND SET OWNERSHIP ---
   - mkdir -p /data/app /data/logs
   - chown -R appsvc:appsvc /data
   - chmod 755 /data /data/app /data/logs
 
+  # Enable fail2ban
   - systemctl enable fail2ban
   - systemctl restart fail2ban
-
