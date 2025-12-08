@@ -64,19 +64,21 @@ runcmd:
   - sed -i '/^Port /d' /etc/ssh/sshd_config              # Remove any existing Port lines
   - systemctl restart sshd
 
-  # --- VOLUME MOUNT /data USING UUID ---
+  # --- FIND FIRST NON-ROOT BLOCK DEVICE AND MOUNT TO /data ---
   - mkdir -p /data
   - |
-      # Format device if empty
-      if ! blkid /dev/sdb; then
-        mkfs.ext4 -F /dev/sdb
+      # Detect first unmounted block device (not root)
+      VOL=$(lsblk -nd -o NAME,TYPE,MOUNTPOINT | awk '$2=="disk" && $3=="" {print "/dev/"$1; exit}')
+      if [ -n "$VOL" ]; then
+        # Create filesystem if missing
+        if ! blkid $VOL; then
+          mkfs.ext4 -F $VOL
+        fi
+        # Mount by UUID
+        UUID=$(blkid -s UUID -o value $VOL)
+        grep -q "$UUID" /etc/fstab || echo "UUID=$UUID /data ext4 defaults,nofail 0 2" >> /etc/fstab
+        mount -a
       fi
-  - |
-      # Get UUID
-      UUID=$(blkid -s UUID -o value /dev/sdb)
-      # Add to fstab if not already there
-      grep -q "$UUID" /etc/fstab || echo "UUID=$UUID /data ext4 defaults,nofail 0 2" >> /etc/fstab
-  - mount -a
 
   # --- CREATE SUBFOLDERS AND SET OWNERSHIP ---
   - mkdir -p /data/app /data/logs
