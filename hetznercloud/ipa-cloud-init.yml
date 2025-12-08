@@ -25,13 +25,6 @@ users:
 # --- SSH CONFIGURATION ---
 ssh_pwauth: false   # disable password auth (optional but recommended)
 
-# --- DISABLE ROOT REMOTE LOGIN (Guaranteed) ---
-write_files:
-  - path: /etc/ssh/sshd_config.d/disable_root.conf
-    permissions: '0644'
-    content: |
-      PermitRootLogin no
-
 # --- FAIL2BAN ---
 packages:
   - fail2ban
@@ -39,6 +32,7 @@ packages:
 write_files:
   - path: /etc/fail2ban/jail.local
     permissions: '0644'
+    owner: root:root
     content: |
       [sshd]
       enabled = true
@@ -47,7 +41,10 @@ write_files:
       maxretry = 5
       bantime = 10m
       findtime = 10m
-
+  - path: /etc/ssh/sshd_config.d/disable_root.conf
+    permissions: '0644'
+    content: |
+      PermitRootLogin no
 
 # --- RUNCMD ---
 runcmd:
