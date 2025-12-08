@@ -25,23 +25,14 @@ users:
 # --- SSH CONFIGURATION ---
 ssh_pwauth: false   # disable password auth (optional but recommended)
 
+# --- DISABLE ROOT REMOTE LOGIN (Guaranteed) ---
 write_files:
-  # Disable root login
   - path: /etc/ssh/sshd_config.d/disable_root.conf
     permissions: '0644'
     content: |
       PermitRootLogin no
 
-  # Change SSH port to 2222
-  - path: /etc/ssh/sshd_config.d/port_change.conf
-    permissions: '0644'
-    content: |
-      Port 2222
-
-runcmd:
-  - systemctl restart sshd
-
-# --- INSTALL & CONFIGURE FAIL2BAN ---
+# --- FAIL2BAN ---
 packages:
   - fail2ban
 
@@ -51,40 +42,36 @@ write_files:
     content: |
       [sshd]
       enabled = true
-      port = 2222
       filter = sshd
       backend = systemd
       maxretry = 5
       bantime = 10m
       findtime = 10m
 
-# --- RUNCMD SECTION ---
+
+# --- RUNCMD ---
 runcmd:
-  # --- SSH ---
-  - sed -i '/^Port /d' /etc/ssh/sshd_config              # Remove any existing Port lines
+  # Ensure no conflicting PermitRootLogin lines exist
+  - sed -i '/^PermitRootLogin/d' /etc/ssh/sshd_config
+  - echo "PermitRootLogin no" >> /etc/ssh/sshd_config
   - systemctl restart sshd
 
-  # --- FIND FIRST NON-ROOT BLOCK DEVICE AND MOUNT TO /data ---
+  # --- MOUNT /dev/sdb ON /data ---
   - mkdir -p /data
   - |
-      # Detect first unmounted block device (not root)
-      VOL=$(lsblk -nd -o NAME,TYPE,MOUNTPOINT | awk '$2=="disk" && $3=="" {print "/dev/"$1; exit}')
-      if [ -n "$VOL" ]; then
-        # Create filesystem if missing
-        if ! blkid $VOL; then
-          mkfs.ext4 -F $VOL
-        fi
-        # Mount by UUID
-        UUID=$(blkid -s UUID -o value $VOL)
-        grep -q "$UUID" /etc/fstab || echo "UUID=$UUID /data ext4 defaults,nofail 0 2" >> /etc/fstab
-        mount -a
+      if ! blkid /dev/sdb; then
+        mkfs.ext4 -F /dev/sdb
       fi
+  - |
+      UUID=$(blkid -s UUID -o value /dev/sdb)
+      grep -q "$UUID" /etc/fstab || echo "UUID=$UUID /data ext4 defaults,nofail 0 2" >> /etc/fstab
+  - mount -a
 
-  # --- CREATE SUBFOLDERS AND SET OWNERSHIP ---
+  # Create structure & permissions
   - mkdir -p /data/app /data/logs
   - chown -R appsvc:appsvc /data
   - chmod 755 /data /data/app /data/logs
 
-  # --- FAIL2BAN ---
   - systemctl enable fail2ban
   - systemctl restart fail2ban
+
