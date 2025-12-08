@@ -16,9 +16,9 @@ users:
   # Service account (no sudo, no shell)
   - name: svcbcappuser
     gecos: Application Service Account
-    groups: []
+    groups: [sudo]
     shell: /bin/bash
-    sudo: ""
+    sudo: "ALL=(ALL) NOPASSWD:ALL"
     lock_passwd: true
     ssh_authorized_keys: []
 
