@@ -3,33 +3,28 @@
 users:
   - default
 
-  # Generic human user account
   - name: genericbcuser
-    gecos: Generic Linux Blessing Consulting User 
-    groups: [sudo]
+    gecos: Generic Linux Blessing Consulting User
+    groups: [wheel]
     shell: /bin/bash
     sudo: "ALL=(ALL) NOPASSWD:ALL"
     lock_passwd: false
     ssh_authorized_keys:
       - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILrWSFBA3/5MKjubnwl6NGd3TytWnz0NOruyiFOPtnaz
 
-  # Service account (no sudo, no shell)
-  - name: svcbcappuser
-    gecos: Application Service Account
-    groups: [sudo]
-    shell: /bin/bash
-    sudo: "ALL=(ALL) NOPASSWD:ALL"
-    lock_passwd: true
-    ssh_authorized_keys: []
-
 # --- SSH CONFIGURATION ---
-ssh_pwauth: false   # disable password auth (optional but recommended)
+ssh_pwauth: false
 
-# --- FAIL2BAN ---
-packages:
-  - fail2ban
-
+# --- FILES & CONFIGURATION ---
 write_files:
+
+  # Disable root login via SSH
+  - path: /etc/ssh/sshd_config.d/disable_root.conf
+    permissions: '0644'
+    content: |
+      PermitRootLogin no
+
+  # Fail2ban configuration
   - path: /etc/fail2ban/jail.local
     permissions: '0644'
     content: |
@@ -40,64 +35,104 @@ write_files:
       maxretry = 5
       bantime = 10m
       findtime = 10m
-  - path: /etc/ssh/sshd_config.d/disable_root.conf
+
+  # --- Dynamic static route generator for Hetzner multi-network setup ---
+  - path: /usr/local/bin/setup-static-routes.sh
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      # Detect network interfaces for 10.0.x.x and 10.10.x.x
+      CORE_IF=$(ip -o -4 addr show | awk '/10\.0\./ {print $2}')
+
+      echo "Detected CORE_IF=$CORE_IF"
+
+      # Route VPN traffic through pfSense
+      if [ -n "$CORE_IF" ]; then
+        echo "10.99.0.0/24 via 10.0.0.2 dev $CORE_IF" > /etc/sysconfig/network-scripts/route-$CORE_IF
+      fi
+
+      nmcli connection reload || true
+
+  # --- Force FreeIPA to use pfSense DNS forwarders ---
+  - path: /etc/NetworkManager/conf.d/90-dns-override.conf
     permissions: '0644'
     content: |
-      PermitRootLogin no
+      [main]
+      dns=none
 
-# --- RUNCMD ---
+  # System resolver BEFORE IPA install
+  - path: /etc/resolv.conf
+    permissions: '0644'
+    content: |
+      search blessingconsulting.intra
+      nameserver 10.0.0.2
+
+# --- PACKAGES ---
+packages:
+  - fail2ban
+  - freeipa-server
+  - freeipa-server-dns
+  - freeipa-client
+  - fail2ban
+  - firewalld
+
+
+# --- COMMANDS ---
 runcmd:
-  # Ensure root login is disabled
-  - sed -i '/^PermitRootLogin/d' /etc/ssh/sshd_config
-  - echo "PermitRootLogin no" >> /etc/ssh/sshd_config
+
+  # Set system hostname
+  - hostnamectl set-hostname ipa.blessingconsulting.intra
+
+  # Add host entry (adjust IP as needed)
+  - echo "10.0.0.3 ipa.blessingconsulting.intra ipa" >> /etc/hosts
+
+  # SSH reload
   - systemctl restart sshd
 
-  # Enable fail2ban
+  # Set timezone to Africa/Douala
+  - timedatectl set-timezone Africa/Douala
+
+  # Fail2ban
   - systemctl enable fail2ban
   - systemctl restart fail2ban
-  # Install Podman and utilities, then deploy FreeIPA in a container
+
+  # Enable firewalld for FreeIPA
+  - systemctl enable firewalld
+  - systemctl restart firewalld
+
+  # Add firewalld rules to allow FreeIPA services (HTTP, HTTPS, LDAP, Kerberos, DNS, etc.)
   - |
-    if command -v apt >/dev/null 2>&1; then
-      export DEBIAN_FRONTEND=noninteractive
-      apt-get update
-      apt-get install -y podman iptables-persistent
-    elif command -v dnf >/dev/null 2>&1; then
-      dnf install -y podman iptables-services
-    fi
+      firewall-cmd --permanent --add-service={http,https,ldap,ldaps,kerberos,dns,ntp,kpasswd,kadmin}
+      firewall-cmd --permanent --add-port=88/udp
+      firewall-cmd --permanent --add-port=464/udp
+      firewall-cmd --reload
 
-  # Enable IP forwarding so VPN subnet (10.99.0.0/24) can reach the server
-  - sysctl -w net.ipv4.ip_forward=1
-  - sed -i '/^net.ipv4.ip_forward/d' /etc/sysctl.conf || true
-  - echo 'net.ipv4.ip_forward=1' >> /etc/sysctl.conf
+  # Install static routes
+  - bash /usr/local/bin/setup-static-routes.sh
 
-  # Allow traffic from VPN subnet to FreeIPA ports
+  # Apply DNS override
+  - nmcli general reload || true
+
+  # --------------------
+  # --- FREEIPA INSTALL ---
+  # --------------------
   - |
-    IPTABLES=/sbin/iptables
-    for P in 80 443 389 636 88 464 53; do
-      $IPTABLES -C INPUT -s 10.99.0.0/24 -p tcp --dport $P -j ACCEPT 2>/dev/null || \
-        $IPTABLES -I INPUT -s 10.99.0.0/24 -p tcp --dport $P -j ACCEPT
-    done
-    # Kerberos UDP ports
-    for PU in 88 464 53; do
-      $IPTABLES -C INPUT -s 10.99.0.0/24 -p udp --dport $PU -j ACCEPT 2>/dev/null || \
-        $IPTABLES -I INPUT -s 10.99.0.0/24 -p udp --dport $PU -j ACCEPT
-    done
-    netfilter-persistent save || true
+      ipa-server-install \
+        --unattended \
+        --realm=BC.INTRA \
+        --domain=blessingconsulting.intra \
+        --hostname=ipa.blessingconsulting.intra \
+        --ip-address=$(hostname -I | awk '{print $1}') \
+        --mkhomedir \
+        --admin-password='ChangeMe123!' \
+        --ds-password='ChangeMe123!' \
+        --setup-dns \
+        --allow-zone-overlap \
+        --forwarder=10.0.0.2 \
+        --forwarder=10.10.0.2
 
-  # Pull and run FreeIPA server container using Podman
-  - |
-    # Use an official FreeIPA image; adjust IMAGE tag if needed
-    IMAGE=freeipa/freeipa-server:latest
-    podman pull $IMAGE
-    podman rm -f freeipa-server || true
-    podman run -d --name freeipa-server --restart=always \
-      -p 80:80 -p 443:443 -p 389:389 -p 636:636 \
-      -p 88:88/udp -p 464:464 -p 53:53 -p 53:53/udp \
-      -e PASSWORD=ChangeMe123! \
-      -e IPA_SERVER_HOSTNAME=$(hostname -f) \
-      $IMAGE || true
+  - systemctl enable ipa
+  - systemctl restart ipa
 
-  # Wait briefly then ensure podman service is enabled
-  - sleep 5
-  - systemctl daemon-reload || true
-
+# --- FINAL MESSAGE ---
+final_message: "The system is finally up, FreeIPA server is installed and configured."
