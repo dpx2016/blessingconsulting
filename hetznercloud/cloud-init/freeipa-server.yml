@@ -1,0 +1,173 @@
+#cloud-config
+hostname: ipa
+fqdn: ipa.blessingconsulting.intra
+manage_etc_hosts: true
+
+###############################################################################
+# NETWORK CONFIG — PRIVATE ONLY
+###############################################################################
+network:
+  version: 2
+  ethernets:
+    eth0:
+      dhcp4: false
+      dhcp6: false
+      addresses:
+        - 10.0.0.4/24
+      routes:
+        - to: default
+          via: 10.0.10.1
+          metric: 100
+      nameservers:
+        search:
+          - blessingconsulting.intra
+        addresses:
+          - 185.12.64.1
+          - 185.12.64.2
+
+###############################################################################
+# USER CONFIG — Generic user with SSH key
+###############################################################################
+users:
+  - default
+
+  - name: genericbcuser
+    gecos: Generic Linux Blessing Consulting User
+    groups: [wheel]
+    shell: /bin/bash
+    sudo: "ALL=(ALL) NOPASSWD:ALL"
+    lock_passwd: false
+    ssh_authorized_keys:
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILrWSFBA3/5MKjubnwl6NGd3TytWnz0NOruyiFOPtnaz
+
+# --- SSH CONFIGURATION ---
+ssh_pwauth: false
+
+# --- FILES & CONFIGURATION ---
+write_files:
+
+  # Disable root login via SSH
+  - path: /etc/ssh/sshd_config.d/disable_root.conf
+    permissions: '0644'
+    content: |
+      PermitRootLogin no
+
+  # Fail2ban configuration
+  - path: /etc/fail2ban/jail.local
+    permissions: '0644'
+    content: |
+      [sshd]
+      enabled = true
+      filter = sshd
+      backend = systemd
+      maxretry = 5
+      bantime = 10m
+      findtime = 10m
+
+###############################################################################
+# PACKAGES (network is ready here)
+###############################################################################
+package_update: true
+package_upgrade: true
+
+packages:
+  - fail2ban 
+  - ipa-server
+  - ipa-server-dns
+  - ipa-client
+  - chrony
+  - firewalld
+  - NetworkManager
+
+###############################################################################
+# FREEIPA INSTALL
+###############################################################################
+runcmd:
+  # Set timezone to Africa/Douala
+  - timedatectl set-timezone Africa/Douala
+  
+  # Change keyboard layout to FR (AZERTY) 
+  - localectl set-keymap fr
+  
+  # Remove hc-utils if installed (conflicts with FreeIPA)
+  - dnf -y remove hc-utils
+
+  # FreeIPA installation script
+  - |
+    set -e
+
+    STATIC_IP="10.0.0.3/24"
+    GATEWAY="10.0.0.1"
+    DNS="185.12.64.2"
+
+    echo "[1/10] Disable Hetzner DHCP service"
+    systemctl disable --now hc-net-ifup@eth0.service || true
+
+    echo "[2/10] Remove any existing eth0 connections"
+    nmcli connection delete eth0 || true
+    
+    echo "[3/10] Create static NM connection"
+    nmcli connection add con-name eth0 ifname eth0 type ethernet ip4 $STATIC_IP gw4 $GATEWAY
+    nmcli connection modify eth0 ipv4.method manual
+    nmcli connection modify eth0 ipv4.dns "$DNS"
+    nmcli connection modify eth0 ipv4.never-default no
+    nmcli connection modify eth0 connection.autoconnect yes
+
+    echo "[4/10] Bring up eth0"
+    nmcli connection up eth0
+
+    echo "[5/10] Verify network"
+    ip addr show eth0
+    ip route
+    cat /etc/resolv.conf
+
+    echo "[6/10] Enable services"
+    systemctl enable --now chronyd firewalld
+    systemctl restart firewalld fail2ban
+
+    echo "[7/10] Configure firewall"
+    firewall-cmd --permanent --add-service=freeipa-ldap
+    firewall-cmd --permanent --add-service=freeipa-ldaps
+    firewall-cmd --permanent --add-service=dns
+    firewall-cmd --permanent --add-service=http
+    firewall-cmd --permanent --add-service=https
+    firewall-cmd --reload
+
+    echo "[8/10] Detect IPA IP"
+    IPA_IP=$(nmcli -g IP4.ADDRESS device show eth0 | awk -F/ '{print $1}')
+    if [[ -z "$IPA_IP" ]]; then
+      echo "ERROR: Could not detect IP"
+      exit 1
+    fi
+    echo "Using IPA IP: $IPA_IP"
+
+    echo "[9/10] Install FreeIPA"
+    DOMAIN="blessingconsulting.intra"
+    REALM="BC.INTRA"
+    HOSTNAME="ipa.blessingconsulting.intra"
+    ADMIN_PASS="StrongAdminPassw0rd!"
+    DM_PASS="StrongDMpassword!"
+    ipa-server-install \
+      --hostname=${HOSTNAME} \
+      --domain=${DOMAIN} \
+      --realm=${REALM} \
+      --ip-address=${IPA_IP} \
+      --ds-password=${DM_PASS} \
+      --admin-password=${ADMIN_PASS} \
+      --setup-dns \
+      --allow-zone-overlap \
+      --forwarder=10.0.0.2 \
+      --mkhomedir \
+      --unattended
+
+    echo "[10/10] Ensure root login disabled and fix adminuser"
+    sed -i 's/^PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
+    systemctl restart sshd
+    chmod 700 /home/genericbcuser
+    chown genericbcuser:genericbcuser /home/genericbcuser
+
+    echo "[10/10] Enable and restart IPA service"
+  - systemctl enable ipa
+  - systemctl restart ipa
+
+final_message: "You can now access the FreeIPA web interface at https://${IPA_IP}/ipa/ui/"
