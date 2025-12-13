@@ -4,28 +4,6 @@ fqdn: ipa.blessingconsulting.intra
 manage_etc_hosts: true
 
 ###############################################################################
-# NETWORK CONFIG — PRIVATE ONLY
-###############################################################################
-network:
-  version: 2
-  ethernets:
-    eth0:
-      dhcp4: false
-      dhcp6: false
-      addresses:
-        - 10.0.0.4/24
-      routes:
-        - to: default
-          via: 10.0.10.1
-          metric: 100
-      nameservers:
-        search:
-          - blessingconsulting.intra
-        addresses:
-          - 185.12.64.1
-          - 185.12.64.2
-
-###############################################################################
 # USER CONFIG — Generic user with SSH key
 ###############################################################################
 users:
@@ -96,7 +74,7 @@ runcmd:
   - |
     set -e
 
-    STATIC_IP="10.0.0.3/24"
+    STATIC_IP="10.0.0.4/24"
     GATEWAY="10.0.0.1"
     DNS="185.12.64.2"
 
@@ -107,11 +85,14 @@ runcmd:
     nmcli connection delete eth0 || true
     
     echo "[3/10] Create static NM connection"
-    nmcli connection add con-name eth0 ifname eth0 type ethernet ip4 $STATIC_IP gw4 $GATEWAY
-    nmcli connection modify eth0 ipv4.method manual
+    nmcli connection addcon-name eth0 \
+      ifname eth0 \
+      type ethernet \
+      ip4 $STATIC_IP \
+      gw4 $GATEWAY
+
     nmcli connection modify eth0 ipv4.dns "$DNS"
-    nmcli connection modify eth0 ipv4.never-default no
-    nmcli connection modify eth0 connection.autoconnect yes
+    nmcli connection modify eth0 ipv4.method manual
 
     echo "[4/10] Bring up eth0"
     nmcli connection up eth0
