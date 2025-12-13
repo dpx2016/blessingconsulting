@@ -55,3 +55,49 @@ runcmd:
   # Enable fail2ban
   - systemctl enable fail2ban
   - systemctl restart fail2ban
+  # Install Podman and utilities, then deploy FreeIPA in a container
+  - |
+    if command -v apt >/dev/null 2>&1; then
+      export DEBIAN_FRONTEND=noninteractive
+      apt-get update
+      apt-get install -y podman iptables-persistent
+    elif command -v dnf >/dev/null 2>&1; then
+      dnf install -y podman iptables-services
+    fi
+
+  # Enable IP forwarding so VPN subnet (10.99.0.0/24) can reach the server
+  - sysctl -w net.ipv4.ip_forward=1
+  - sed -i '/^net.ipv4.ip_forward/d' /etc/sysctl.conf || true
+  - echo 'net.ipv4.ip_forward=1' >> /etc/sysctl.conf
+
+  # Allow traffic from VPN subnet to FreeIPA ports
+  - |
+    IPTABLES=/sbin/iptables
+    for P in 80 443 389 636 88 464 53; do
+      $IPTABLES -C INPUT -s 10.99.0.0/24 -p tcp --dport $P -j ACCEPT 2>/dev/null || \
+        $IPTABLES -I INPUT -s 10.99.0.0/24 -p tcp --dport $P -j ACCEPT
+    done
+    # Kerberos UDP ports
+    for PU in 88 464 53; do
+      $IPTABLES -C INPUT -s 10.99.0.0/24 -p udp --dport $PU -j ACCEPT 2>/dev/null || \
+        $IPTABLES -I INPUT -s 10.99.0.0/24 -p udp --dport $PU -j ACCEPT
+    done
+    netfilter-persistent save || true
+
+  # Pull and run FreeIPA server container using Podman
+  - |
+    # Use an official FreeIPA image; adjust IMAGE tag if needed
+    IMAGE=freeipa/freeipa-server:latest
+    podman pull $IMAGE
+    podman rm -f freeipa-server || true
+    podman run -d --name freeipa-server --restart=always \
+      -p 80:80 -p 443:443 -p 389:389 -p 636:636 \
+      -p 88:88/udp -p 464:464 -p 53:53 -p 53:53/udp \
+      -e PASSWORD=ChangeMe123! \
+      -e IPA_SERVER_HOSTNAME=$(hostname -f) \
+      $IMAGE || true
+
+  # Wait briefly then ensure podman service is enabled
+  - sleep 5
+  - systemctl daemon-reload || true
+
