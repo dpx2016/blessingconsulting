@@ -1,7 +1,7 @@
 #cloud-config
 hostname: ipa
 fqdn: ipa.blessingconsulting.intra
-manage_etc_hosts: true
+manage_etc_hosts: false
 
 ###############################################################################
 # USER CONFIG — Generic user with SSH key
@@ -48,15 +48,6 @@ write_files:
 package_update: true
 package_upgrade: true
 
-packages:
-  - fail2ban 
-  - ipa-server
-  - ipa-server-dns
-  - ipa-client
-  - chrony
-  - firewalld
-  - NetworkManager
-
 ###############################################################################
 # FREEIPA INSTALL
 ###############################################################################
@@ -64,6 +55,8 @@ runcmd:
   # Set timezone to Africa/Douala
   - timedatectl set-timezone Africa/Douala
   
+  # Fill /etc/hosts with the hostname and IP address
+  - 
   # Change keyboard layout to FR (AZERTY) 
   - localectl set-keymap fr
   
@@ -74,25 +67,28 @@ runcmd:
   - |
     set -e
 
-    STATIC_IP="10.0.0.4/24"
+    STATIC_IP="10.0.0.3/24"
     GATEWAY="10.0.0.1"
     DNS="185.12.64.2"
+
+    echo "Preparing network configuration"
+    DOMAIN="blessingconsulting.intra"
+    REALM="BC.INTRA"
+    HOSTNAME="ipa.blessingconsulting.intra"
+    ADMIN_PASS="StrongAdminPassw0rd!"
+    DM_PASS="StrongDMpassword!"
 
     echo "[1/10] Disable Hetzner DHCP service"
     systemctl disable --now hc-net-ifup@eth0.service || true
 
     echo "[2/10] Remove any existing eth0 connections"
     nmcli connection delete eth0 || true
-    
-    echo "[3/10] Create static NM connection"
-    nmcli connection addcon-name eth0 \
-      ifname eth0 \
-      type ethernet \
-      ip4 $STATIC_IP \
-      gw4 $GATEWAY
 
-    nmcli connection modify eth0 ipv4.dns "$DNS"
+    echo "[3/10] Create static eth0 connection"    
+    nmcli connection add con-name eth0 ifname eth0 type ethernet ip4 $STATIC_IP gw4 $GATEWAY
     nmcli connection modify eth0 ipv4.method manual
+    nmcli connection modify eth0 ipv4.dns "$DNS"
+    nmcli connection modify eth0 ipv4.never-default no
 
     echo "[4/10] Bring up eth0"
     nmcli connection up eth0
@@ -102,11 +98,15 @@ runcmd:
     ip route
     cat /etc/resolv.conf
 
+    echo "[5/10] Install fail2ban, firewall  & chrony packages"
+    dnf -y install chrony firewalld epel-release 
+    dnf -y install fail2ban
+
     echo "[6/10] Enable services"
     systemctl enable --now chronyd firewalld
     systemctl restart firewalld fail2ban
 
-    echo "[7/10] Configure firewall"
+    echo "[7/10] Configure firewall for FreeIPA"
     firewall-cmd --permanent --add-service=freeipa-ldap
     firewall-cmd --permanent --add-service=freeipa-ldaps
     firewall-cmd --permanent --add-service=dns
@@ -114,7 +114,7 @@ runcmd:
     firewall-cmd --permanent --add-service=https
     firewall-cmd --reload
 
-    echo "[8/10] Detect IPA IP"
+    echo "[8/10] Detect local IPA IP"
     IPA_IP=$(nmcli -g IP4.ADDRESS device show eth0 | awk -F/ '{print $1}')
     if [[ -z "$IPA_IP" ]]; then
       echo "ERROR: Could not detect IP"
@@ -122,12 +122,14 @@ runcmd:
     fi
     echo "Using IPA IP: $IPA_IP"
 
+    # update /etc/hosts file
+    echo "${IPA_IP}  ${HOSTNAME} ${HOSTNAME%%.*}" >> /etc/hosts
+
+    echo "Install freeipa packages"
+    dnf -y install ipa-server ipa-server-dns ipa-client
+
     echo "[9/10] Install FreeIPA"
-    DOMAIN="blessingconsulting.intra"
-    REALM="BC.INTRA"
-    HOSTNAME="ipa.blessingconsulting.intra"
-    ADMIN_PASS="StrongAdminPassw0rd!"
-    DM_PASS="StrongDMpassword!"
+
     ipa-server-install \
       --hostname=${HOSTNAME} \
       --domain=${DOMAIN} \
@@ -136,19 +138,19 @@ runcmd:
       --ds-password=${DM_PASS} \
       --admin-password=${ADMIN_PASS} \
       --setup-dns \
-      --allow-zone-overlap \
-      --forwarder=10.0.0.2 \
-      --mkhomedir \
+      --no-forwarders \
       --unattended
 
-    echo "[10/10] Ensure root login disabled and fix adminuser"
+    echo "Disable root login via SSH"
     sed -i 's/^PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
     systemctl restart sshd
+
+    echo "Ensure genericbcuser home permissions"
     chmod 700 /home/genericbcuser
     chown genericbcuser:genericbcuser /home/genericbcuser
 
-    echo "[10/10] Enable and restart IPA service"
-  - systemctl enable ipa
-  - systemctl restart ipa
+    echo "You can now access the FreeIPA web interface at https://${IPA_IP}/ipa/ui/"
 
-final_message: "You can now access the FreeIPA web interface at https://${IPA_IP}/ipa/ui/"
+  # "Enable and restart services"
+  - systemctl enable ipa 
+  - systemctl restart ipa
