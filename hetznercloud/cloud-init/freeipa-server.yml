@@ -75,8 +75,12 @@ runcmd:
     DOMAIN="blessingconsulting.intra"
     REALM="BC.INTRA"
     HOSTNAME="ipa.blessingconsulting.intra"
-    ADMIN_PASS="StrongAdminPassw0rd!"
-    DM_PASS="StrongDMpassword!"
+    ADMIN_PASS=$(openssl rand -base64 24)
+    DM_PASS=$(openssl rand -base64 24)
+
+    echo "Admin password: $ADMIN_PASS" > /root/ipa-secrets.txt
+    echo "Directory Manager password: $DM_PASS" >> /root/ipa-secrets.txt
+    chmod 600 /root/ipa-secrets.txt
 
     echo "[1/10] Disable Hetzner DHCP service"
     systemctl disable --now hc-net-ifup@eth0.service || true
@@ -138,6 +142,7 @@ runcmd:
       --ds-password=${DM_PASS} \
       --admin-password=${ADMIN_PASS} \
       --setup-dns \
+      --auto-reverse \
       --no-forwarders \
       --unattended
 
