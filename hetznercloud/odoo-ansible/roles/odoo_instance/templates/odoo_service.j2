@@ -1,0 +1,17 @@
+[Unit]
+Description=Odoo Instance for %i
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=odoo
+Group=odoo
+ExecStart={{ app_folder }}/venv/bin/python3 {{ app_folder }}/source/odoo-bin -c {{ app_folder }}/configs/%i.conf
+StandardOutput=append:{{ data_folder }}/logs/%i.log
+StandardError=append:{{ data_folder }}/logs/%i.log
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

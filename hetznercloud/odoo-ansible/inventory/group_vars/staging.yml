@@ -1,0 +1,5 @@
+odoo_env: staging
+odoo_port: 8069
+odoo_db_name: odoo_staging
+odoo_workers: 2
+odoo_domain: staging.odoo.example.com

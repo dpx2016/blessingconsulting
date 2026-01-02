@@ -1,0 +1,4 @@
+# Domain Name                                 # HAProxy Backend Name
+{% for cust in customers %}
+{{ cust.name }}.cabinetblessingconsulting.com  be_odoo_{{ cust.name }}
+{% endfor %}

@@ -1,0 +1,37 @@
+- name: Configure LDAP authentication in Odoo
+  become: yes
+  become_user: "{{ odoo_user }}"
+  shell: |
+    {{ odoo_home }}/venv/bin/python3 {{ odoo_home }}/odoo/odoo-bin shell -d {{ odoo_db_name }} <<'EOF'
+    from odoo import api, SUPERUSER_ID
+    env = api.Environment(cr, SUPERUSER_ID, {})
+
+    ldap_model = env['res.company.ldap']
+
+    existing = ldap_model.search([], limit=1)
+    if existing:
+        existing.write({
+            'ldap_server': '{{ ldap_server }}',
+            'ldap_server_port': {{ ldap_port }},
+            'ldap_binddn': '{{ ldap_bind_dn }}',
+            'ldap_password': '{{ ldap_bind_password }}',
+            'ldap_base': '{{ ldap_base_dn }}',
+            'ldap_filter': '{{ ldap_filter }}',
+            'ldap_tls': {{ 'True' if ldap_use_ssl else 'False' }},
+            'user': 'uid',
+            'create_user': True,
+        })
+    else:
+        ldap_model.create({
+            'ldap_server': '{{ ldap_server }}',
+            'ldap_server_port': {{ ldap_port }},
+            'ldap_binddn': '{{ ldap_bind_dn }}',
+            'ldap_password': '{{ ldap_bind_password }}',
+            'ldap_base': '{{ ldap_base_dn }}',
+            'ldap_filter': '{{ ldap_filter }}',
+            'ldap_tls': {{ 'True' if ldap_use_ssl else 'False' }},
+            'user': 'uid',
+            'create_user': True,
+        })
+    EOF
+  when: ldap_enabled

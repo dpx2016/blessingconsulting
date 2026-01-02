@@ -1,0 +1,16 @@
+- name: Configure logrotate for Odoo instances
+  copy:
+    dest: /etc/logrotate.d/odoo
+    content: |
+      /data/odoo/logs/*.log {
+          daily
+          missingok
+          rotate 14
+          compress
+          notifempty
+          nocreate
+          sharedscripts
+          postrotate
+              /usr/bin/systemctl reload odoo@* > /dev/null 2>&1 || true
+          endscript
+      }

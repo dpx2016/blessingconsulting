@@ -1,0 +1,127 @@
+#cloud-config
+hostname: odoo-db
+fqdn: odoo-db.cabinetblessingconsulting.intra
+manage_etc_hosts: false
+
+# ---------------------------------------------------
+# Timezone & locale
+# ---------------------------------------------------
+timezone: Africa/Douala
+locale: fr_FR.UTF-8
+
+keyboard:
+  layout: fr
+  variant: azerty
+
+# ---------------------------------------------------
+# Users
+# ---------------------------------------------------
+users:
+  - default
+
+  - name: genericbcuser
+    gecos: Generic Linux Blessing Consulting User
+    groups: [sudo]
+    shell: /bin/bash
+    sudo: "ALL=(ALL) NOPASSWD:ALL"
+    lock_passwd: false
+    ssh_authorized_keys:
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILrWSFBA3/5MKjubnwl6NGd3TytWnz0NOruyiFOPtnaz
+
+
+  - name: postgresadmin
+    system: true
+    shell: /usr/sbin/nologin
+    ssh_authorized_keys: []
+    lock_passwd: true
+
+# ---------------------------------------------------
+# SSH hardening
+# ---------------------------------------------------
+ssh_pwauth: false
+disable_root: true
+
+write_files:
+
+  # Disable root login via SSH
+  - path: /etc/ssh/sshd_config.d/disable_root.conf
+    permissions: '0644'
+    content: |
+      PermitRootLogin no
+
+  - path: /etc/ssh/sshd_config.d/99-hardening.conf
+    permissions: "0644"
+    content: |
+      PermitRootLogin no
+      PasswordAuthentication no
+      PubkeyAuthentication yes
+      AllowUsers postgresadmin
+ 
+  # Fail2ban configuration
+  - path: /etc/fail2ban/jail.local
+    permissions: '0644'
+    content: |
+      [sshd]
+      enabled = true
+      filter = sshd
+      backend = systemd
+      maxretry = 5
+      bantime = 10m
+      findtime = 10m
+
+# ---------------------------------------------------
+# Network configuration (STATIC, NO DHCP)
+# ---------------------------------------------------
+network:
+  version: 2
+  ethernets:
+    eth0:
+      dhcp4: false
+      dhcp6: false
+      addresses:
+        - 10.1.1.2/32       # <-- PostgreSQL server IP
+      routes:
+        - to: default
+          via: 10.0.0.1
+      nameservers:
+        addresses:
+          - 185.12.64.2
+
+# ---------------------------------------------------
+# Runtime provisioning (network guaranteed UP)
+# ---------------------------------------------------
+runcmd:
+  # Wait for network
+  - |
+    until ping -c1 185.12.64.2 >/dev/null 2>&1; do
+      sleep 2
+    done
+
+  # Ensure ufw is fully disabled (pfSense handles firewalling)
+  - systemctl stop ufw || true
+  - systemctl disable ufw || true
+  - ufw --force reset || true
+
+  # Install PostgreSQL
+  - apt-get update
+  - DEBIAN_FRONTEND=noninteractive apt-get -y upgrade
+  - DEBIAN_FRONTEND=noninteractive apt-get -y install postgresql postgresql-contrib
+
+  # Configure PostgreSQL to listen only on private IP
+  - sed -i "s/^#listen_addresses =.*/listen_addresses = '10.0.1.10'/" /etc/postgresql/*/main/postgresql.conf
+
+  # Allow Odoo subnet to connect
+  - |
+    echo "host    all     all     10.0.1.0/24     md5" >> /etc/postgresql/*/main/pg_hba.conf
+
+  # Restart PostgreSQL
+  - systemctl enable postgresql
+  - systemctl restart postgresql
+
+  # Restart SSH
+  - systemctl restart ssh
+
+final_message: |
+  Cloud-init complete.
+  PostgreSQL installed and listening on private IP only.
+  Access allowed from 10.0.1.0/24.

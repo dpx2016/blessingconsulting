@@ -1,0 +1,26 @@
+odoo_workers: 2
+# odoo_domain: odoo.cabinetblessingconsulting.com
+
+db_host_internal: "10.1.1.2"         # Internal IP of your Postgres Server
+
+public_domain: "cabinetblessingconsulting.com"
+internal_domain: "odoo.cabinetblessingconsulting.intra"
+
+# Internal IPs for the HAProxy Backend configuration
+app_servers:
+  - name: "odoo-app1"
+    ip: "10.2.1.2"
+  - name: "odoo-app2"
+    ip: "10.2.1.3" 
+
+
+# The Customer Master List
+customers:
+  - name: "veto-yaounde"
+    port: 8069
+    db_password: "yaounde" # don't forget to change this password
+    public_url: "veto-yaounde.cabinetblessingconsulting.com"
+  - name: "veto-bafoussam"
+    port: 8070
+    db_password: "bafoussam" # don't forget to change this password
+    public_url: "veto-bafoussam.cabinetblessingconsulting.com"
