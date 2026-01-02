@@ -157,3 +157,31 @@ runcmd:
   # "Enable and restart services"
   - systemctl enable ipa 
   - systemctl restart ipa
+
+  # create pfsense-bind user
+  - ipa user-add pfsense-bind   --first=pfSense   --last=LDAP   --shell=/sbin/nologin   --password
+  - ipa user-mod pfsense-bind --password-expiration=20380119031407Z
+
+  # create pfsense-bind permisions and privileges
+  - ipa privilege-add pfsense-ldap-read   --desc="Read-only LDAP access for pfSense"
+  - ipa permission-add "pfSense Read Users" --type=user --right=read --bindtype=permission
+  - ipa permission-add "pfSense Read Groups" --type=group --right=read --bindtype=permission
+  - ipa privilege-add-permission pfsense-ldap-read  --permissions="pfSense Read Users"  --permissions="pfSense Read Groups"
+  - ipa privilege-add-permission pfsense-ldap-read --permissions="pfSense Read Membership"  
+  - ipa role-add pfsense-ldap-reader   --desc="pfSense LDAP bind role"
+  - ipa role-add-privilege pfsense-ldap-reader   --privileges=pfsense-ldap-read
+  - ipa role-add-member pfsense-ldap-reader   --users=pfsense-bind   
+
+  # create odoo-bind user
+  - ipa user-add odoo-bind   --first=Odoo   --last=LDAP   --shell=/sbin/nologin   --password
+  - ipa user-mod odoo-bind --password-expiration=20380119031407Z
+
+  # create odoo-bind permisions and privileges
+  - ipa privilege-add odoo-ldap-read   --desc="Read-only LDAP access for Odoo"
+  - ipa permission-add "Odoo Read Users" --type=user --right=read --bindtype=permission
+  - ipa permission-add "Odoo Read Groups" --type=group --right=read --bindtype=permission
+  - ipa permission-add "Odoo Read Membership" --type=memberof --right=read --bindtype=permission
+  - ipa privilege-add-permission odoo-ldap-read  --permissions="Odoo Read Users"  --permissions="Odoo Read Groups"  --permissions="Odoo Read Membership"
+  - ipa role-add odoo-ldap-reader   --desc="Odoo LDAP bind role"
+  - ipa role-add-privilege odoo-ldap-reader   --privileges=odoo-ldap-read 
+  - ipa role-add-member odoo-ldap-reader   --users=odoo-bind    
