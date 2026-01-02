@@ -1,6 +1,6 @@
 #cloud-config
 hostname: ipa
-fqdn: ipa.blessingconsulting.intra
+fqdn: ipa.cabinetblessingconsulting.intra
 manage_etc_hosts: false
 
 ###############################################################################
@@ -67,14 +67,14 @@ runcmd:
   - |
     set -e
 
-    STATIC_IP="10.0.0.3/24"
+    STATIC_IP="10.0.1.2/32"
     GATEWAY="10.0.0.1"
     DNS="185.12.64.2"
 
     echo "Preparing network configuration"
-    DOMAIN="blessingconsulting.intra"
-    REALM="BC.INTRA"
-    HOSTNAME="ipa.blessingconsulting.intra"
+    DOMAIN="cabinetblessingconsulting.intra"
+    REALM="CABINETBLESSINGCONSULTING.INTRA"
+    HOSTNAME="ipa.cabinetblessingconsulting.intra"
     ADMIN_PASS=$(openssl rand -base64 24)
     DM_PASS=$(openssl rand -base64 24)
 
@@ -83,7 +83,9 @@ runcmd:
     chmod 600 /root/ipa-secrets.txt
 
     echo "[1/10] Disable Hetzner DHCP service"
+    systemctl stop hc-net-ifup@eth0.service || true
     systemctl disable --now hc-net-ifup@eth0.service || true
+    systemctl mask hc-net-ifup@eth0.service || true
 
     echo "[2/10] Remove any existing eth0 connections"
     nmcli connection delete eth0 || true
@@ -108,15 +110,11 @@ runcmd:
 
     echo "[6/10] Enable services"
     systemctl enable --now chronyd firewalld
-    systemctl restart firewalld fail2ban
 
-    echo "[7/10] Configure firewall for FreeIPA"
-    firewall-cmd --permanent --add-service=freeipa-ldap
-    firewall-cmd --permanent --add-service=freeipa-ldaps
-    firewall-cmd --permanent --add-service=dns
-    firewall-cmd --permanent --add-service=http
-    firewall-cmd --permanent --add-service=https
-    firewall-cmd --reload
+    echo "[7/10] Disable firewall for FreeIPA"
+    systemctl stop firewalld         
+    systemctl disable firewalld      
+    systemctl mask firewalld         
 
     echo "[8/10] Detect local IPA IP"
     IPA_IP=$(nmcli -g IP4.ADDRESS device show eth0 | awk -F/ '{print $1}')
@@ -130,7 +128,7 @@ runcmd:
     echo "${IPA_IP}  ${HOSTNAME} ${HOSTNAME%%.*}" >> /etc/hosts
 
     echo "Install freeipa packages"
-    dnf -y install ipa-server ipa-server-dns ipa-client
+    dnf -y install ipa-server ipa-server-dns ipa-client ipa-server-trust-ad
 
     echo "[9/10] Install FreeIPA"
 
