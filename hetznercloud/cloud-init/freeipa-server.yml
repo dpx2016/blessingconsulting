@@ -63,6 +63,19 @@ runcmd:
   # Remove hc-utils if installed (conflicts with FreeIPA)
   - dnf -y remove hc-utils
 
+  - |
+    CUR_HOSTNAME=$(hostname)
+    CUR_IP=$(hostname -I | cut -d' ' -f1)
+    cat <<EOF > /etc/motd
+      ========================================================
+      WELCOME TO BLESSING CONSULTING IT INFRA - FREEIPA SERVER
+      IP Address: $CUR_HOSTNAME"
+      Hostname : $CUR_IP
+      Status: Passwordless SSH Enabled (Internal)
+      ========================================================
+    EOF
+
+
   # FreeIPA installation script
   - |
     set -e
@@ -184,4 +197,10 @@ runcmd:
   - ipa privilege-add-permission odoo-ldap-read  --permissions="Odoo Read Users"  --permissions="Odoo Read Groups"  --permissions="Odoo Read Membership"
   - ipa role-add odoo-ldap-reader   --desc="Odoo LDAP bind role"
   - ipa role-add-privilege odoo-ldap-reader   --privileges=odoo-ldap-read 
-  - ipa role-add-member odoo-ldap-reader   --users=odoo-bind    
+  - ipa role-add-member odoo-ldap-reader   --users=odoo-bind 
+
+  # ssh config for genericbcuser
+  - echo "Host *" >> /home/genericbcuser/.ssh/config
+  - echo "    StrictHostKeyChecking no" >> /home/genericbcuser/.ssh/config
+  - chown genericbcuser:genericbcuser /home/genericbcuser/.ssh/config
+  - chmod 600 /home/genericbcuser/.ssh/config   

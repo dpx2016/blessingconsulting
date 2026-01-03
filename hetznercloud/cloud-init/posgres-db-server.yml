@@ -1,5 +1,5 @@
 #cloud-config
-hostname: odoo-db
+hostname: odoo-db.cabinetblessingconsulting.intra
 fqdn: odoo-db.cabinetblessingconsulting.intra
 manage_etc_hosts: false
 
@@ -21,13 +21,11 @@ users:
 
   - name: genericbcuser
     gecos: Generic Linux Blessing Consulting User
-    groups: [sudo]
+    groups: sudo
     shell: /bin/bash
-    sudo: "ALL=(ALL) NOPASSWD:ALL"
-    lock_passwd: false
+    sudo: ['ALL=(ALL) NOPASSWD:ALL']
     ssh_authorized_keys:
       - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILrWSFBA3/5MKjubnwl6NGd3TytWnz0NOruyiFOPtnaz
-
 
   - name: postgresadmin
     system: true
@@ -41,56 +39,97 @@ users:
 ssh_pwauth: false
 disable_root: true
 
+# --- FILES & CONFIGURATION ---
 write_files:
 
-  # Disable root login via SSH
-  - path: /etc/ssh/sshd_config.d/disable_root.conf
-    permissions: '0644'
-    content: |
-      PermitRootLogin no
-
-  - path: /etc/ssh/sshd_config.d/99-hardening.conf
+  - path: /etc/ssh/sshd_config.d/ssh-hardening.conf
     permissions: "0644"
     content: |
-      PermitRootLogin no
       PasswordAuthentication no
+      PermitRootLogin no
       PubkeyAuthentication yes
-      AllowUsers postgresadmin
- 
-  # Fail2ban configuration
-  - path: /etc/fail2ban/jail.local
-    permissions: '0644'
-    content: |
-      [sshd]
-      enabled = true
-      filter = sshd
-      backend = systemd
-      maxretry = 5
-      bantime = 10m
-      findtime = 10m
+      ChallengeResponseAuthentication no
+      X11Forwarding no
+      AllowTcpForwarding yes
+      AllowAgentForwarding yes 
+      AuthorizedKeysFile .ssh/authorized_keys
+      AllowUsers genericbcuser       
 
-# ---------------------------------------------------
-# Network configuration (STATIC, NO DHCP)
-# ---------------------------------------------------
-network:
-  version: 2
-  ethernets:
-    eth0:
-      dhcp4: false
-      dhcp6: false
-      addresses:
-        - 10.1.1.2/32       # <-- PostgreSQL server IP
-      routes:
-        - to: default
-          via: 10.0.0.1
-      nameservers:
-        addresses:
-          - 185.12.64.2
+  - path: /etc/update-motd.d/99-blessing-banner
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      echo "========================================================"
+      echo "  WELCOME TO BLESSING CONSULTING IT INFRA - ODOO CLUSTER DB"
+      echo "  IP Address: $(hostname -I | cut -d' ' -f1)"
+      echo "  Hostname : $(hostname | cut -d' ' -f1)"
+      echo "  Status: Passwordless SSH Enabled (Internal)"
+      echo "========================================================"
+
+  # -----------------------------
+  # Netplan (static networking)
+  # -----------------------------
+  - path: /etc/netplan/60-my-private-network.yaml
+    permissions: "0600"
+    content: |
+      network:
+        version: 2
+        renderer: networkd
+        ethernets:
+          enp7s0:
+            dhcp4: false
+            dhcp6: false
+            addresses:
+              - 10.1.1.2/32
+            routes:
+              - to: default
+                via: 10.1.0.1
+                on-link: true
+            nameservers:
+              addresses: [10.0.1.2, 185.12.64.2]
+              search: [cabinetblessingconsulting.intra]
 
 # ---------------------------------------------------
 # Runtime provisioning (network guaranteed UP)
 # ---------------------------------------------------
 runcmd:
+
+  - |
+      cat <<EOF > /home/genericbcuser/.ssh/id_ed25519
+      -----BEGIN OPENSSH PRIVATE KEY-----
+      b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+      QyNTUxOQAAACC61khQQN/+TCo7m58JejRnd08rVp89DTq7sohTj7Z2swAAAKAQFcUHEBXF
+      BwAAAAtzc2gtZWQyNTUxOQAAACC61khQQN/+TCo7m58JejRnd08rVp89DTq7sohTj7Z2sw
+      AAAEBr1V8aaaSQA/Eaf0Aab2z1AoKuTE/+9xCFiiRLi6u+07rWSFBA3/5MKjubnwl6NGd3
+      TytWnz0NOruyiFOPtnazAAAAHURlZmF1bHQgaGV0em5lciBTU0ggS2V5cyBwYWly
+      -----END OPENSSH PRIVATE KEY-----
+      EOF
+  - chown genericbcuser:genericbcuser /home/genericbcuser/.ssh/id_ed25519
+  - chmod 600 /home/genericbcuser/.ssh/id_ed25519
+
+  - |
+      cat <<EOF > /home/genericbcuser/.ssh/id_ed25519.pub
+      ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILrWSFBA3/5MKjubnwl6NGd3TytWnz0NOruyiFOPtnaz
+      EOF
+  - chown genericbcuser:genericbcuser /home/genericbcuser/.ssh/id_ed25519.pub
+  - chmod 644 /home/genericbcuser/.ssh/id_ed25519.pub
+
+    # 3. Write the SSH Config to skip host checking
+  - |
+    cat <<EOF > /home/genericbcuser/.ssh/config
+    Host *
+        StrictHostKeyChecking no
+        UserKnownHostsFile /dev/null
+    EOF
+  - chown genericbcuser:genericbcuser /home/genericbcuser/.ssh/config
+  - chmod 600 /home/genericbcuser/.ssh/config
+
+  # Disable hc-net-ifup service to avoid conflicts
+  - systemctl stop hc-net-ifup@enp7s0.service
+  - systemctl mask hc-net-ifup@enp7s0.service
+  - sudo netplan generate
+  - sudo netplan apply
+
   # Wait for network
   - |
     until ping -c1 185.12.64.2 >/dev/null 2>&1; do
@@ -102,26 +141,18 @@ runcmd:
   - systemctl disable ufw || true
   - ufw --force reset || true
 
-  # Install PostgreSQL
-  - apt-get update
-  - DEBIAN_FRONTEND=noninteractive apt-get -y upgrade
-  - DEBIAN_FRONTEND=noninteractive apt-get -y install postgresql postgresql-contrib
-
-  # Configure PostgreSQL to listen only on private IP
-  - sed -i "s/^#listen_addresses =.*/listen_addresses = '10.0.1.10'/" /etc/postgresql/*/main/postgresql.conf
-
-  # Allow Odoo subnet to connect
-  - |
-    echo "host    all     all     10.0.1.0/24     md5" >> /etc/postgresql/*/main/pg_hba.conf
-
-  # Restart PostgreSQL
-  - systemctl enable postgresql
-  - systemctl restart postgresql
-
   # Restart SSH
   - systemctl restart ssh
 
-final_message: |
-  Cloud-init complete.
-  PostgreSQL installed and listening on private IP only.
-  Access allowed from 10.0.1.0/24.
+  # ssh config for genericbcuser
+  - echo "Host *" >> /home/genericbcuser/.ssh/config
+  - echo "    StrictHostKeyChecking no" >> /home/genericbcuser/.ssh/config
+  - chown genericbcuser:genericbcuser /home/genericbcuser/.ssh/config
+  - chmod 600 /home/genericbcuser/.ssh/config  
+ 
+  # Disable MOTD help text
+  - chmod -x /etc/update-motd.d/10-help-text
+  
+  # apply netplan once again to ensure network is correctly configured
+  - sudo netplan generate
+  - sudo netplan apply
