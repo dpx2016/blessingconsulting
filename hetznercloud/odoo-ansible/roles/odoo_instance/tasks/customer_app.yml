@@ -1,0 +1,21 @@
+---
+- name: Create Customer Filestore
+  file:
+    path: "{{ data_folder }}/filestore/{{ item.name }}"
+    state: directory
+    owner: odoo
+    group: odoo
+
+- name: Generate Odoo Config
+  template:
+    src: odoo.conf.j2
+    dest: "{{ app_folder }}/configs/{{ item.name }}.conf"
+    owner: odoo
+    group: odoo
+    mode: '0640'
+
+- name: Start Odoo Instance
+  systemd:
+    name: "odoo@{{ item.name }}"
+    state: started
+    enabled: yes

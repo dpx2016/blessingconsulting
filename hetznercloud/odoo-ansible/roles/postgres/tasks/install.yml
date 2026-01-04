@@ -1,0 +1,57 @@
+- name: Install PostgreSQL packages
+  apt:
+    name:
+      - "postgresql-{{ postgres_version }}"
+      - "postgresql-client-{{ postgres_version }}"
+      - "postgresql-contrib-{{ postgres_version }}"
+      - "python3-psycopg2"  
+    update_cache: yes
+    state: present
+
+- name: Stop PostgreSQL before migration
+  service:
+    name: postgresql
+    state: stopped
+
+- name: Ensure directories exist with correct permissions
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ postgres_user }}"
+    group: "{{ postgres_group }}"
+    mode: '0750'
+  with_items:
+    - "{{ postgres_data_dir }}"
+    - "{{ postgres_apps_dir }}"
+    - "{{ postgres_conf_dir }}"    
+    - "{{ postgres_log_dir }}" 
+    - "{{ postgres_data_dir }}/{{ postgres_version }}"   
+
+- name: Initialize or move Data Directory to {{ postgres_data_dir }}
+  command: rsync -av /var/lib/postgresql/{{ postgres_version }}/main/ {{ postgres_data_dir }}/{{ postgres_version }}/main/
+  args:
+    creates: "{{ postgres_data_dir }}/{{ postgres_version }}/main/" # Only runs if not already there
+
+- name: Deploy pg_hba.conf from template
+  template:
+    src: pg_hba.conf.j2
+    dest: "{{ postgres_conf_dir }}/pg_hba.conf"
+    owner: postgres
+    group: postgres
+    mode: '0640'
+
+- name: Deploy optimized postgresql.conf from template
+  ansible.builtin.template:
+    src: postgresql.conf.j2
+    dest: "/etc/postgresql/{{ postgres_version }}/main/postgresql.conf"
+    owner: "{{ postgres_user }}"
+    group: "{{ postgres_group }}"
+    mode: '0644'
+  notify: restart postgresql
+
+
+- name: Create symbolic link in /apps for easy access
+  ansible.builtin.file:
+    src: "/etc/postgresql/{{ postgres_version }}/main/postgresql.conf"
+    dest: "{{ postgres_conf_dir }}/postgresql.conf"
+    state: link

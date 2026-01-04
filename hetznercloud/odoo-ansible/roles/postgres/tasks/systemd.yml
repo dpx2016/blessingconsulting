@@ -1,0 +1,17 @@
+- name: Create systemd drop-in directory for PostgreSQL
+  file:
+    path: "/etc/systemd/system/postgresql@{{ postgres_version }}-main.service.d"
+    state: directory
+
+- name: Deploy systemd overrides (Resource Limits)
+  copy:
+    dest: "/etc/systemd/system/postgresql@{{ postgres_version }}-main.service.d/override.conf"
+    content: |
+      [Service]
+      # Increase file limits for many customer databases
+      LimitNOFILE=65535
+      # Give Postgres more time to shut down safely if cache is large
+      TimeoutStopSec=300
+  notify: 
+    - reload systemd
+    - restart postgresql

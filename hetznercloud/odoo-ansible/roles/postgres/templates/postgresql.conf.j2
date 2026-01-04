@@ -1,0 +1,33 @@
+# DB Version: {{ postgres_version }}
+
+# Paths
+data_directory = '{{ postgres_data_dir }}/{{ pg_version }}/main'
+hba_file = '{{ postgres_conf_dir }}/pg_hba.conf'
+ident_file = '{{ postgres_conf_dir }}/pg_ident.conf'
+
+log_directory = '{{ postgres_log_dir }}'
+log_filename = 'postgresql-%Y-%m-%d.log'
+log_truncate_on_rotation = on
+log_rotation_age = 1d
+log_rotation_size = 0
+
+# Odoo Optimizations
+# Memory (safe defaults – override via vars if needed)
+shared_buffers = {{ (ansible_memtotal_mb * 0.25) | int }}MB
+effective_cache_size = {{ (ansible_memtotal_mb * 0.75) | int }}MB
+work_mem = 16MB
+maintenance_work_mem = 512MB
+
+# WAL / Checkpoints
+wal_compression = on
+checkpoint_timeout = 15min
+max_wal_size = 4GB
+min_wal_size = 1GB
+
+# Connections
+max_connections = 100
+
+# Networking
+listen_addresses = '*'
+port = 5432
+

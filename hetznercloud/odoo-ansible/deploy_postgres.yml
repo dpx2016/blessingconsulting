@@ -1,0 +1,8 @@
+---
+
+- name: PostgreSQL with custom paths
+  hosts: odoo_db
+  become: yes
+
+  roles:
+    - role: postgres

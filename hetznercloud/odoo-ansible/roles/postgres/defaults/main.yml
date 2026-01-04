@@ -1,0 +1,12 @@
+postgres_version: 16
+pg_version: "{{ postgres_version }}"
+postgres_user: postgres
+postgres_group: postgres
+
+postgres_data_dir: /data/postgres
+postgres_apps_dir: /apps/postgres
+postgres_conf_dir: "{{ postgres_apps_dir }}/conf"
+postgres_log_dir: "{{ postgres_data_dir }}/logs"
+
+postgres_bin_dir: "/usr/lib/postgresql/{{ postgres_version }}/bin"
+postgres_service: postgresql

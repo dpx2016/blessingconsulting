@@ -1,0 +1,6 @@
+galaxy_info:
+  role_name: postgres
+  author: you
+  description: PostgreSQL with custom data and config directories
+  license: MIT
+  min_ansible_version: "2.14"
