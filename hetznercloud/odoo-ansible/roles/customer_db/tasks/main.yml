@@ -8,7 +8,7 @@
   become: yes
   become_user: postgres
 
-- name: Create PostgreSQL databases for all customers
+- name: Create PostgreSQL databases for customers {{ item.name }}
   community.postgresql.postgresql_db:
     name: "{{ item.db_name }}"
     owner: "{{ item.db_user }}"

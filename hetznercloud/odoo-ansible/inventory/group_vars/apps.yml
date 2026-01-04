@@ -14,7 +14,6 @@ app_servers:
   - name: "odoo-app2"
     ip: "10.2.1.3" 
 
-
 # The Customer Master List
 customers:
   - name: "veto-yaounde"
@@ -29,4 +28,4 @@ customers:
     db_user: "veto_bafoussam_user"
     db_name: "veto_bafoussam"
     db_password: "bafoussam" # don't forget to change this password
-    public_url: "veto-bafoussam.cabinetblessingconsulting.com"
+    public_url: "veto-bafoussam.cabinetblessingconsulting.com"    
