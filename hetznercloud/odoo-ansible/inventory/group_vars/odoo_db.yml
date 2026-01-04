@@ -1,0 +1,16 @@
+
+# The Customer Master List
+customers:
+  - name: "veto-yaounde"
+    port: 8069
+    db_user: "veto_yaounde_user"
+    db_name: "veto_yaounde"
+    db_password: "yaounde" # don't forget to change this password
+    public_url: "veto-yaounde.cabinetblessingconsulting.com"
+  
+  - name: "veto-bafoussam"
+    port: 8070
+    db_user: "veto_bafoussam_user"
+    db_name: "veto_bafoussam"
+    db_password: "bafoussam" # don't forget to change this password
+    public_url: "veto-bafoussam.cabinetblessingconsulting.com"
