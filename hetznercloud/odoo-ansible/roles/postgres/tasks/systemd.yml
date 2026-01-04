@@ -15,3 +15,9 @@
   notify: 
     - reload systemd
     - restart postgresql
+
+- name: restart postgresql
+  systemd:
+    name: "postgresql@{{ postgres_version }}-main"
+    state: restarted
+    enabled: yes

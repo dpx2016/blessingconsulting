@@ -1,7 +1,9 @@
 # TYPE  DATABASE        USER            ADDRESS                 METHOD
+# "peer" means: if I am the linux user 'postgres', let me in without a password
 local   all             postgres                                peer
-local   all             all                                     peer
-host    all             all             127.0.0.1/32            md5
-host    all             all             ::1/128                 md5
+
+# "scram-sha-256" means: everyone else must provide a secure password
+local   all             all                                     scram-sha-256
+host    all             all             127.0.0.1/32            scram-sha-256
 # Allow Odoo to connect (adjust the subnet to your needs)
-host    all             all             0.0.0.0/0               md5
+host    all             all             0.0.0.0/0               scram-sha-256

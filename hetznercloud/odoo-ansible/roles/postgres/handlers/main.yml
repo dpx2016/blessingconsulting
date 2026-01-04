@@ -2,13 +2,18 @@
   systemd:
     daemon_reload: yes
 
+- name: reload postgresql
+  systemd:
+    name: "postgresql@{{ postgres_version }}-main"
+    state: reloaded
+
 - name: restart postgresql
   systemd:
-    name: "{{ postgres_service }}"
+    name: "postgresql@{{ postgres_version }}-main"
     state: restarted
     enabled: yes
 
 - name: stop postgresql
   systemd:
-    name: "{{ postgres_service }}"
+    name: "postgresql@{{ postgres_version }}-main"
     state: stopped
