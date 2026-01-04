@@ -35,7 +35,7 @@
   notify: reload systemd
 
 - name: Setup Customer Specifics
-  include_tasks: customer_deploy.yml
+  include_tasks: customer_app.yml
   loop: "{{ customers }}"
   loop_control:
     label: "{{ item.name }}"

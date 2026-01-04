@@ -1,9 +1,0 @@
----
-- name: Provision PostgreSQL Databases
-  hosts: odoo-db
-  become: yes
-  tasks:
-    - name: Run Postgres Setup
-      include_role:
-        name: postgresql
-      loop: "{{ customers }}"      
