@@ -14,6 +14,9 @@ ldap_server: ipa.cabinetblessingconsulting.intra
 ldap_port: 636
 ldap_use_ssl: true
 ldap_bind_dn: uid=odoo-bind,cn=users,cn=accounts,dc=cabinetblessingconsulting,dc=intra
-ldap_bind_password: "odoo" # change this password
+ldap_bind_password: odoo # change this password
 ldap_base_dn: cn=users,cn=accounts,dc=cabinetblessingconsulting,dc=intra
-ldap_filter: "(&(uid=%s)(memberOf=cn=odoo-users,cn=groups,cn=accounts,dc=cabinetblessingconsulting,dc=intra))"
+ldap_filter: (&(uid=%s)(memberOf=cn=odoo-users,cn=groups,cn=accounts,dc=cabinetblessingconsulting,dc=intra))
+
+# odoo public domain
+public_domain: odoo.cabinetblessingconsulting.com

@@ -1,16 +1,18 @@
 - name: Create Directory Tree
   file:
-    path: "{{ item }}"
+    path: "{{ dir_path }}"
     state: directory
-    owner: odoo
-    group: odoo
+    owner: "{{ odoo_user }}"
+    group: "{{ odoo_user }}"
     mode: '0755'
   loop:
     - "{{ app_folder }}"
-    - "{{ app_folder }}/configs"
+    - "{{ app_folder }}/conf"
     - "{{ app_folder }}/custom"
     - "{{ data_folder }}/logs"
     - "{{ data_folder }}/filestore"
+  loop_control:
+    loop_var: dir_path
 
 - name: Download Odoo Source Code
   git:
@@ -18,14 +20,29 @@
     dest: "{{ app_folder }}/source"
     depth: 1
     version: "{{ odoo_version }}"
-  become_user: odoo
+  become_user: "{{ odoo_user }}"
 
-- name: Create Python Virtual Environment
+- name: Create  Python Virtual Environment
+  command: python3 -m venv {{ app_folder }}/venv
+  args:
+    creates: "{{ app_folder }}/venv/bin/activate"
+  become_user: "{{ odoo_user }}"
+
+- name: Upgrade pip tooling in venv
+  pip:
+    name:
+      - pip
+      - setuptools
+      - wheel
+    state: latest
+    virtualenv: "{{ app_folder }}/venv"
+  become_user: "{{ odoo_user }}"
+
+- name: Install Odoo requirements
   pip:
     requirements: "{{ app_folder }}/source/requirements.txt"
     virtualenv: "{{ app_folder }}/venv"
-    virtualenv_command: python3 -m venv
-  become_user: odoo  
+  become_user: "{{ odoo_user }}"  
 
 - name: Deploy Systemd Service Template
   template:
@@ -39,3 +56,4 @@
   loop: "{{ customers }}"
   loop_control:
     label: "{{ item.name }}"
+    

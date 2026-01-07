@@ -12,5 +12,11 @@
       - libjpeg-dev
       - node-less
       - postgresql-client
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+      - libpq-dev
+      - build-essential
     state: present
     update_cache: yes

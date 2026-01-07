@@ -1,19 +1,20 @@
 [options]
-admin_passwd =" {{ admin_password | default('admin') }}"
-db_host = "{{ db_host_internal }}"
-db_user = "{{ item.name }}"
-db_password = "{{ item.db_password }}"
-db_name = "{{ item.name }}"
-dbfilter = ^{{ item.name }}$
+admin_passwd = {{ admin_password | default('admin') }}
+db_host = {{ db_host_internal }}
+db_user = {{ item.db_user }}
+db_password = {{ item.db_password }}
+db_name = {{ item.db_name }}
+dbfilter = "^{{ item.name }}$"
 
 # Custom Paths
-data_dir =" {{ data_folder }}/filestore/{{ item.name }}"
-logfile = "{{ data_folder }}/logs/{{ item.name }}.log"
+data_dir = {{ data_folder }}/filestore/{{ item.name }}
+logfile = {{ data_folder }}/logs/{{ item.name }}.log
 
 # Networking
-http_port = "{{ item.port }}"
-longpolling_port = "{{ item.port + 1000 }}"
+http_port = {{ item.port }}
+longpolling_port = {{ item.port + 1000 }}
 proxy_mode = True
+xmllrpc_interface = 0.0.0.0
 
 # Addons
 addons_path = {{ app_folder }}/source/addons,{{ app_folder }}/custom/{{ item.name }}
@@ -24,9 +25,8 @@ addons_path = {{ app_folder }}/source/addons,{{ app_folder }}/custom/{{ item.nam
 ldap_server = "{{ ldap_server }}"
 ldap_base = "{{ ldap_base_dn }}"
 
-workers = "{{ odoo_workers }}"
+workers = {{ odoo_workers }}
 max_cron_threads = 1
-proxy_mode = True
 
 # Performance Tuning
 limit_memory_hard = 1677721600

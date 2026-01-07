@@ -142,20 +142,6 @@ runcmd:
   - systemctl disable ufw || true
   - ufw --force reset || true
 
-  # Update & install packages
-  - apt-get update
-  - DEBIAN_FRONTEND=noninteractive apt-get -y upgrade
-  - DEBIAN_FRONTEND=noninteractive apt-get -y install \
-      fail2ban \
-      ca-certificates \
-      curl \
-      gnupg \
-      lsb-release
-
-  # Enable fail2ban
-  - systemctl enable fail2ban
-  - systemctl start fail2ban
-
   # Reload SSH
   - systemctl restart ssh
 

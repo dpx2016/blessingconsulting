@@ -1,6 +1,6 @@
 ---
 - name: Deploy Odoo App Instances
-  hosts: apps
+  hosts: odoo_apps
   become: yes
   tasks:
 

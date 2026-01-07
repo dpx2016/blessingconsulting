@@ -1,5 +1,5 @@
 - name: Generate HAProxy Map File
   template:
     src: haproxy_map.txt.j2
-    dest: "{{ app_folder }}/configs/haproxy_map.txt"
+    dest: "{{ app_folder }}/conf/haproxy_map.txt"
   delegate_to: localhost # Run this once on your management machine

@@ -1,7 +1,7 @@
 ---
 - name: Create PostgreSQL users for all customers
   community.postgresql.postgresql_user:
-    name: "{{ item.db_user }}"
+    name: {{ item.db_user }}
     password: "{{ item.db_password }}"
     role_attr_flags: "NOSUPERUSER,CREATEDB"
   loop: "{{ customers }}"
@@ -10,8 +10,8 @@
 
 - name: Create PostgreSQL databases for customers {{ item.name }}
   community.postgresql.postgresql_db:
-    name: "{{ item.db_name }}"
-    owner: "{{ item.db_user }}"
+    name: {{ item.db_name }}
+    owner: {{ item.db_user }}
     encoding: "UTF-8"
   loop: "{{ customers }}"
   become: yes

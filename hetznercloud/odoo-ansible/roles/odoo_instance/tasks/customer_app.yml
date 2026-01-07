@@ -1,21 +1,49 @@
 ---
-- name: Create Customer Filestore
+- name: Create Customer Filestore {{ item.name }}
   file:
     path: "{{ data_folder }}/filestore/{{ item.name }}"
     state: directory
-    owner: odoo
-    group: odoo
+    owner: "{{ odoo_user }}"
+    group: "{{ odoo_user }}"
 
-- name: Generate Odoo Config
+- name: Create Customer Custom addons Directory {{ item.name }}
+  file:
+    path: "{{ app_folder }}/custom/{{ item.name }}"
+    state: directory
+    owner: "{{ odoo_user }}"
+    group: "{{ odoo_user }}"
+
+- name: Generate Odoo Config {{ item.name }}
   template:
     src: odoo.conf.j2
-    dest: "{{ app_folder }}/configs/{{ item.name }}.conf"
-    owner: odoo
-    group: odoo
+    dest: "{{ app_folder }}/conf/{{ item.name }}.conf"
+    owner: "{{ odoo_user }}"
+    group: "{{ odoo_user }}"
     mode: '0640'
 
-- name: Start Odoo Instance
+- name: Check if database is already initialized {{ item.name }}
+  stat:
+    path: "{{ app_folder }}/conf/{{ item.name }}.initialized"
+  register: db_check
+
+- name: Stop Odoo Instance {{ item.name }}
   systemd:
     name: "odoo@{{ item.name }}"
-    state: started
+    state: stopped
+
+- name: Initialize empty database for customer {{ item.name }}
+  command: >
+    {{ app_folder }}/venv/bin/python3 {{ app_folder }}/source/odoo-bin 
+    -c {{ app_folder }}/conf/{{ item.name }}.conf
+    -d {{ item.db_name }}
+    --init=base
+    --stop-after-init
+  become_user: "{{ odoo_user }}"
+  args:
+    creates: "{{ app_folder }}/conf/{{ item.name }}.initialized"
+
+- name: Start Odoo Instance {{ item.name }}
+  systemd:
+    name: "odoo@{{ item.name }}"
+    state: restarted
     enabled: yes
