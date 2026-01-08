@@ -2,8 +2,9 @@
   hosts: odoo_db
   become: yes
   vars_files:
-    - group_vars/odoo_apps.yml  
+    - inventory/group_vars/odoo_apps.yml  
   tasks:
     - name: Run Postgres Setup for customers
       include_role:
         name: customer_db
+      loop: "{{ customers }}"  

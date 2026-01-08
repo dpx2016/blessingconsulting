@@ -1,0 +1,6 @@
+---
+- name: Deploy prometheus
+  hosts: metrics
+  become: yes
+  roles:
+    - prometheus

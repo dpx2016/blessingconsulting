@@ -1,0 +1,8 @@
+---
+
+influxdb_host: localhost
+
+ldap_bind_dn: uid=grafana-bind,cn=users,cn=accounts,dc=cabinetblessingconsulting,dc=intra
+ldap_bind_password: grafana # change this password
+ldap_base_dn: cn=users,cn=accounts,dc=cabinetblessingconsulting,dc=intra
+ldap_filter: (&(uid=%s)(memberOf=cn=grafana-users,cn=groups,cn=accounts,dc=cabinetblessingconsulting,dc=intra))

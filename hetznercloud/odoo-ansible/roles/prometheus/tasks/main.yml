@@ -1,0 +1,48 @@
+---
+
+- name: Create custom directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ prometheus_user }}"
+    group: "{{ prometheus_group }}"
+    mode: '0755'
+  loop:
+    - "{{ app_folder }}"
+    - "{{ conf_folder }}"
+    - "{{ data_folder }}"
+
+- name: Download and Prometheus
+  unarchive:
+    src: "{{ prometheus_download_url }}"
+    dest: /tmp/prometheus-{{ prometheus_version }}.linux-amd64
+    remote_src: yes    
+    mode: "0755"
+
+- name: Extract prometheus to {{ app_folder }}
+  unarchive:
+    src: "/tmp/prometheus-{{ prometheus_version }}.linux-amd64"
+    dest: "{{ app_folder }}"
+    owner: "{{ prometheus_user }}"
+    group: "{{ prometheus_group }}"
+    mode: '0755'
+    remote_src: yes
+    extra_opts:
+      - --strip-components=1
+
+- name: Deploy Prometheus configuration
+  template:
+    src: prometheus.yml.j2
+    dest: "{{ conf_folder }}/prometheus.yml"
+    owner: "{{ prometheus_user }}"
+    group: "{{ prometheus_group }}"
+    mode: '0644'
+
+- name: Deploy Systemd service
+  template:
+    src: prometheus.service.j2
+    dest: /etc/systemd/system/prometheus.service
+  notify: 
+    - reload systemd
+    - enable prometheus
+    - restart prometheus 

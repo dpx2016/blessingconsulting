@@ -1,0 +1,32 @@
+[[servers]]
+host = "{{ ldap_server }}"
+port = 636
+use_ssl = true
+ssl_skip_verify = false
+
+bind_dn = "{{ ldap_bind_dn }}"
+bind_password = "{{ ldap_bind_password }}"
+
+search_filter = "(uid=%s)"
+search_base_dns = ["cn=users,cn=accounts,dc=cabinetblessingconsulting,dc=intra"]
+
+[servers.attributes]
+name = givenName
+surname = sn
+username = uid
+email = mail
+member_of = member
+
+
+[[servers.group_mappings]]
+group_dn = "cn=grafana-admins,cn=groups,cn=accounts,dc=cabinetblessingconsulting,dc=intra"
+org_role = Admin
+grafana_admin = true
+
+[[servers.group_mappings]]
+group_dn = "cn=grafana-viewer,cn=groups,cn=accounts,dc=cabinetblessingconsulting,dc=intra"
+org_role = "Viewer"
+
+[[servers.group_mappings]]
+group_dn = "cn=grafana-editor,cn=groups,cn=accounts,dc=cabinetblessingconsulting,dc=intra"
+org_role = "Editor"

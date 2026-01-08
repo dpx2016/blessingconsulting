@@ -1,0 +1,6 @@
+---
+- name: Deploy Grafana with LDAP
+  hosts: metrics
+  become: yes
+  roles:
+    - grafana

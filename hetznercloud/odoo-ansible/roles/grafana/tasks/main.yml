@@ -1,0 +1,69 @@
+
+---
+- name: Create Grafana directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ grafana_user }}"
+    group: "{{ grafana_group }}"
+    mode: "0755"
+  loop:
+    - "{{ app_folder }}"
+    - "{{ conf_folder }}"
+    - "{{ provisioning_folder }}"
+    - "{{ ds_folder }}"
+    - "{{ dsb_folder }}"
+    - "{{ data_folder }}"
+    - "{{ pid_folder }}"
+    - "{{ log_folder }}"
+    - "{{ sessions_folder }}"
+    - "{{ plugins_folder }}"
+
+- name: Download and unarchive Grafana
+  unarchive:
+    src: "{{ grafana_download_url }}"
+    dest: /tmp/grafana-{{ grafana_version }}.linux-amd64
+    remote_src: yes    
+    mode: "0755"
+
+- name: Extract Grafana to {{ app_folder }}
+  copy:
+    src: "/tmp/grafana-{{ grafana_version }}.linux-amd64"
+    dest: "{{ app_folder }}"
+    owner: "{{ grafana_user }}"
+    group: "{{ grafana_group }}"
+    mode: '0755'
+    remote_src: yes
+    extra_opts:
+      - --strip-components=1
+
+- name: Set Env files
+  template:
+    src: "env.j2"
+    dest: "{{ grafana_env_file }}"
+    owner: "{{ grafana_user }}"
+    group: "{{ grafana_group }}"
+    mode: "0644"
+
+- name: Deploy config files
+  template:
+    src: "{{ item }}.j2"
+    dest: "{{ conf_folder }}/{{ item }}"
+    owner: "{{ grafana_user }}"
+    group: "{{ grafana_group }}"
+    mode: "0644"
+  loop:
+    - grafana.ini
+    - ldap.toml
+
+- name: Install Grafana systemd service
+  template:
+    src: grafana-server.service.j2
+    dest: /etc/systemd/system/grafana-server.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - reload systemd
+    - enable grafana    
+    - start grafana

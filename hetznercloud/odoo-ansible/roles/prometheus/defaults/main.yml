@@ -1,0 +1,12 @@
+---
+
+prometheus_version: "3.5.0"
+prometheus_user: "{{ odoo_user }}"
+prometheus_group: "{{ odoo_group }}"
+
+# Custom Paths
+app_folder: "/apps/prometheus"
+conf_folder: "{{ app_folder }}/conf"
+data_folder: "/data/prometheus"
+
+git_url: "https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_version }}/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz"

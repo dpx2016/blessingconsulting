@@ -1,6 +1,6 @@
 #cloud-config
-hostname: odoo-app2.cabinetblessingconsulting.intra
-fqdn: odoo-app2.cabinetblessingconsulting.intra
+hostname: metrics.cabinetblessingconsulting.intra
+fqdn: metrics.cabinetblessingconsulting.intra
 manage_etc_hosts: false
 
 # ---------------------------------------------------
@@ -60,7 +60,7 @@ write_files:
     content: |
       #!/bin/bash
       echo "========================================================"
-      echo "  WELCOME TO BLESSING CONSULTING IT INFRA - ODOO APP NODE 1"
+      echo "  WELCOME TO BLESSING CONSULTING IT INFRA - METRICS NODE"
       echo "  IP Address: $(hostname -I | cut -d' ' -f1)"
       echo "  Hostname : $(hostname | cut -d' ' -f1)"
       echo "  Status: Passwordless SSH Enabled (Internal)"
@@ -81,7 +81,7 @@ write_files:
             dhcp4: false
             dhcp6: false
             addresses:
-              - 10.0.1.4/32
+              - 10.0.1.5/32
             routes:
               - to: default
                 via: 10.0.0.1

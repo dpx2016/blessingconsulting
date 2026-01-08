@@ -1,0 +1,52 @@
+[Unit]
+Description=Grafana Server (Tarball Install)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+EnvironmentFile= {{ env_file }}
+User={{ grafana_user }}
+Group={{ grafana_group }}
+Type=notify
+WorkingDirectory={{ app_folder }}
+RuntimeDirectory=grafana
+RuntimeDirectoryMode=0750
+
+ExecStart={{ app_folder }}/bin/grafana-server \
+                --config=${CONF_FILE} \
+                --pidfile=${PID_FILE_DIR}/grafana-server.pid \
+                -homepath {{ app_folder }} \
+                cfg:default.paths.logs=${LOG_DIR} \
+                cfg:default.paths.data=${DATA_DIR} \
+                cfg:default.paths.plugins=${PLUGINS_DIR} \
+                cfg:default.paths.provisioning=${PROVISIONING_CFG_DIR}
+
+LimitNOFILE=10000
+TimeoutStopSec=20
+CappabilityBoundingSet=
+DeviceAllow=
+LockPersonality=true
+MemoryDenyWriteExecute=false
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateTmp=true
+ProtectClock=true
+ProtectControlGroups=true
+ProtectHome=true
+ProtectHostname=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunaables=true
+ProtectProc=invisible
+ProtectSystem=full
+RemoveIPC=true
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+SystemcallArchitectures=native
+UMask=0027
+Restart=always
+RestartSec=60
+
+[Install]
+WantedBy=multi-user.target

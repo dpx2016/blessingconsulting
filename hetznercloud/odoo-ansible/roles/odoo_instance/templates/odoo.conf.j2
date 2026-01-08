@@ -4,7 +4,8 @@ db_host = {{ db_host_internal }}
 db_user = {{ item.db_user }}
 db_password = {{ item.db_password }}
 db_name = {{ item.db_name }}
-dbfilter = "^{{ item.name }}$"
+dbfilter = ^{{ item.name }}$
+list_db = False # TODO
 
 # Custom Paths
 data_dir = {{ data_folder }}/filestore/{{ item.name }}
@@ -12,7 +13,7 @@ logfile = {{ data_folder }}/logs/{{ item.name }}.log
 
 # Networking
 http_port = {{ item.port }}
-longpolling_port = {{ item.port + 1000 }}
+gevent_port = {{ item.port + 1000 }}
 proxy_mode = True
 xmllrpc_interface = 0.0.0.0
 

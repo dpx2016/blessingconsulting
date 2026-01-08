@@ -1,0 +1,22 @@
+[server]
+http_port = 3000
+domain = metrics.cabinetblessingconsulting.com
+root_url = https://metrics.cabinetblessingconsulting.com
+
+[paths]
+data = {{ data_folder }}
+logs = {{ data_folder }}/logs
+plugins = {{ data_folder }}/plugins
+provisioning = {{ app_folder }}/provisioning
+
+[auth.ldap]
+enabled = true
+config_file = {{ app_folder }}/ldap.toml
+
+[users]
+allow_sign_up = false
+auto_assign_org_role = Viewer
+
+[dataproxy]
+timeout = 120
+keep_alive_seconds = 10

@@ -1,0 +1,20 @@
+
+---
+grafana_version: "12.3.1"
+grafana_user: "{{ odoo_user }}"
+grafana_group: "{{ odoo_group }}"
+
+app_folder: /apps/grafana
+conf_folder: "{{ app_folder }}/conf"
+ds_folder: "{{ app_folder }}/provisioning/datasources"
+dsb_folder: "{{ app_folder }}/provisioning/dashboards"
+provisioning_folder: "{{ app_folder }}/provisioning"
+pid_folder: "{{ app_folder }}/pid"
+grafana_env_file: "{{ app_folder }}/env"
+data_folder: /data/grafana/data
+log_folder: "{{ data_folder }}/logs"
+sessions_folder: "{{ data_folder }}/sessions"
+plugins_folder: "{{ data_folder }}/plugins"
+
+grafana_download_url: https://dl.grafana.com/grafana-enterprise/release/{{ grafana_version }}/grafana-enterprise_{{ grafana_version }}_20271043721_linux_amd64.tar.gz
+

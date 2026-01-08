@@ -4,21 +4,21 @@
     path: "{{ data_folder }}/filestore/{{ item.name }}"
     state: directory
     owner: "{{ odoo_user }}"
-    group: "{{ odoo_user }}"
+    group: "{{ odoo_group }}"
 
 - name: Create Customer Custom addons Directory {{ item.name }}
   file:
     path: "{{ app_folder }}/custom/{{ item.name }}"
     state: directory
     owner: "{{ odoo_user }}"
-    group: "{{ odoo_user }}"
+    group: "{{ odoo_group }}"
 
 - name: Generate Odoo Config {{ item.name }}
   template:
     src: odoo.conf.j2
     dest: "{{ app_folder }}/conf/{{ item.name }}.conf"
     owner: "{{ odoo_user }}"
-    group: "{{ odoo_user }}"
+    group: "{{ odoo_group }}"
     mode: '0640'
 
 - name: Check if database is already initialized {{ item.name }}
@@ -30,6 +30,7 @@
   systemd:
     name: "odoo@{{ item.name }}"
     state: stopped
+  when: not db_check.stat.exists
 
 - name: Initialize empty database for customer {{ item.name }}
   command: >
@@ -41,6 +42,7 @@
   become_user: "{{ odoo_user }}"
   args:
     creates: "{{ app_folder }}/conf/{{ item.name }}.initialized"
+  when: not db_check.stat.exists
 
 - name: Start Odoo Instance {{ item.name }}
   systemd:
