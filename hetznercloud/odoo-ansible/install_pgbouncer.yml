@@ -1,0 +1,4 @@
+- hosts: odoo_db
+  become: yes
+  roles:
+    - pgbouncer

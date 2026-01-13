@@ -1,0 +1,5 @@
+- name: Enable and start PgBouncer
+  systemd:
+    name: pgbouncer
+    enabled: yes
+    state: started

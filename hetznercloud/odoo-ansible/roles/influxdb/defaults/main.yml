@@ -1,0 +1,17 @@
+---
+
+influxdb_version: "3.8.0"
+
+influxdb_user: "{{ odoo_user }}"
+influxdb_group: "{{odoo_group }}"
+
+# Custom Paths
+app_folder: "/apps/influxdb"
+conf_folder: "{{ app_folder }}/conf"
+data_folder: "/data/influxdb"
+
+node_exporter_host: 0.0.0.0
+node_exporter_port: 9100
+node_exporter_options: ''
+
+influxdb_download_url: "https://dl.influxdata.com/influxdb/releases/influxdb2-{{ influxdb_version }}-linux-amd64.tar.gz"

@@ -1,0 +1,33 @@
+#SPDX-License-Identifier: MIT-0
+---
+# defaults file for roles/pgbouncer
+pgbouncer_listen_addr: "0.0.0.0"
+pgbouncer_listen_port: 6432
+
+pgbouncer_pool_mode: transaction
+pgbouncer_max_client_conn: 2000
+pgbouncer_default_pool_size: 8
+pgbouncer_reserve_pool_size: 2
+pgbouncer_min_pool_size: 2
+
+pgbouncer_server_idle_timeout: 60
+pgbouncer_server_lifetime: 3600
+
+postgres_host: "127.0.0.1"
+postgres_port: 5432
+pgbouncer_auth_type: scram-sha-256
+
+
+pgbouncer_admin_user: postgres
+pgbouncer_user: "pgbouncer"
+pgbouncer_password: "pgbouncer"
+
+# Déclaration des bases Odoo
+odoo_databases:
+  - name: veto
+    db_user: veto
+    db_password: veto
+
+  - name: classic
+    db_user: classic
+    db_password: classic

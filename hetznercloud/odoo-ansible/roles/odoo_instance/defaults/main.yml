@@ -1,24 +1,13 @@
-app_folder: /apps/odoo
-data_folder: /data/odoo
 
 odoo_home: "{{ app_folder }}"
-odoo_version: "17.0"
+odoo_version: "15.0"
 odoo_repo: https://github.com/odoo/odoo.git
 
 odoo_env: production
 
 # FreeIPA / LDAP Settings
 
-ldap_bind_dn: uid=odoo-bind,cn=users,cn=accounts,dc=cabinetblessingconsulting,dc=intra
-ldap_bind_password: odoo # change this password
-ldap_base_dn: cn=users,cn=accounts,dc=cabinetblessingconsulting,dc=intra
 ldap_filter: (&(uid=%s)(memberOf=cn=odoo-users,cn=groups,cn=accounts,dc=cabinetblessingconsulting,dc=intra))
-
-# odoo public domain
-public_domain: odoo.cabinetblessingconsulting.com
-
-odoo_workers: 2
-# odoo_domain: odoo.cabinetblessingconsulting.com
 
 db_host_internal: 10.1.1.2         # Internal IP of your Postgres Server
 

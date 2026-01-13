@@ -1,8 +1,0 @@
-
-odoo_user: odoo
-odoo_group: odoo
-
-ldap_enabled: true
-ldap_server: ipa.cabinetblessingconsulting.intra
-ldap_port: 636
-ldap_use_ssl: true

@@ -11,4 +11,3 @@
     - name: Run Odoo Instance Setup
       include_role:
         name: odoo_instance
-      loop: "{{ customers }}"

@@ -1,0 +1,15 @@
+---
+
+- name: reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: enable influxdb
+  systemd:    
+    name: influxdb
+    enabled: yes  
+
+- name: restart influxdb
+  systemd:
+    name: influxdb
+    state: restarted

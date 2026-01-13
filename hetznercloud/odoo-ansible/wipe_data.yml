@@ -1,0 +1,8 @@
+---
+- name: Wipe data folder
+  hosts: "{{ ansible_limit }}"
+  tasks:
+    - name: Remove data folder
+      file:
+        path: "{{ data_folder }}"
+        state: absent

@@ -1,0 +1,40 @@
+- name: Ensure PostgreSQL users exist
+  become: yes
+  become_user: postgres
+  postgresql_user:
+    name: "{{ item.db_user }}"
+    password: "{{ item.db_password }}"
+    role_attr_flags: "NOSUPERUSER,NOCREATEDB,NOCREATEROLE"
+  loop: "{{ odoo_databases }}"
+
+- name: Ensure PostgreSQL databases exist
+  become: yes
+  become_user: postgres
+  postgresql_db:
+    name: "{{ item.name }}"
+    owner: "{{ item.db_user }}"
+  loop: "{{ odoo_databases }}"
+
+- name: Ensure PgBouncer admin user exists
+  become: yes
+  become_user: postgres
+  postgresql_user:
+    name: "{{ pgbouncer_user }}"
+    password: "{{ pgbouncer_user }}"
+
+- name: Fetch SCRAM secrets from PostgreSQL
+  become: yes
+  become_user: postgres
+  postgresql_query:
+    db: postgres
+    query: |
+      SELECT usename, passwd
+      FROM pg_shadow
+      WHERE usename IN (
+        {% for db in odoo_databases %}
+        '{{ db.db_user }}',
+        {% endfor %}
+        '{{ pgbouncer_admin_user }}',
+        '{{ pgbouncer_user }}'
+      );
+  register: pg_users_secrets

@@ -1,0 +1,5 @@
+addon_names:
+  # - om_account_accountant
+  # - om_fiscal_year
+  # - centralisation_distributeurs
+  - centralisation_classic

@@ -1,0 +1,3 @@
+---
+# Boolean variable to decide whether to create database or not
+create_db_do: false 

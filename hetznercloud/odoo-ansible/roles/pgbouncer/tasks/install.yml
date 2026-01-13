@@ -1,0 +1,5 @@
+- name: Install PgBouncer
+  apt:
+    name: pgbouncer
+    state: present
+    update_cache: yes

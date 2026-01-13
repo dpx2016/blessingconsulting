@@ -10,6 +10,10 @@ Group=odoo
 ExecStart={{ app_folder }}/venv/bin/python3 {{ app_folder }}/source/odoo-bin -c {{ app_folder }}/conf/%i.conf
 StandardOutput=append:{{ data_folder }}/logs/%i.log
 StandardError=append:{{ data_folder }}/logs/%i.log
+PIDFile={{ app_folder }}/conf/%i.pid
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=30
 Restart=always
 RestartSec=10
 

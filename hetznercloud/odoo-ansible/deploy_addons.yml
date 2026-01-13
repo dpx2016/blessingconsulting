@@ -1,0 +1,6 @@
+
+- import_playbook: install_addons.yml
+
+- import_playbook: delete_files.yml
+  vars:
+    delete_path: "/mnt/blessing/applis/addons/custom_addons/*/*/in/"

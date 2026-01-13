@@ -1,0 +1,16 @@
+---
+- name: Drop PostgreSQL customers database
+  hosts: odoo_db
+  become: yes
+  become_user: postgres
+  tasks:
+    - name: Drop the customers database 
+      postgresql_db:
+        name: "{{ customer.db_name }}"
+        state: absent
+      loop: "{{ customers }}"
+      loop_control:
+          loop_var: customer   
+      when: "target_customers is not defined or customer.name in target_customers"  
+  
+# ansible-playbook drop.yml -e "target_customers=['client_a']"

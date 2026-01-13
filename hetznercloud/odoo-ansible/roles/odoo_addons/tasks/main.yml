@@ -1,0 +1,7 @@
+- name: Install addons per customer
+  include_tasks: customer_addons.yml
+  loop: "{{ customers }}"
+  loop_control:
+    loop_var: customer
+  when: "target_customers is not defined or customer.name in target_customers"  
+    

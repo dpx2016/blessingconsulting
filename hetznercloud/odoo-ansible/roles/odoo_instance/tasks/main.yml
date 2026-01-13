@@ -13,14 +13,18 @@
     - "{{ data_folder }}/filestore"
   loop_control:
     loop_var: dir_path
+  tags: folders  
 
-- name: Download Odoo Source Code
+- name: Download Odoo {{ odoo_version }} Source Code
   git:
     repo: 'https://www.github.com/odoo/odoo'
     dest: "{{ app_folder }}/source"
     depth: 1
     version: "{{ odoo_version }}"
+    single_branch: yes
+    force: yes
   become_user: "{{ odoo_user }}"
+  tags: source
 
 - name: Create  Python Virtual Environment
   command: python3 -m venv {{ app_folder }}/venv
@@ -50,10 +54,12 @@
     dest: /etc/systemd/system/odoo@.service
     mode: '0644'
   notify: reload systemd
+  tags: service
 
 - name: Setup Customer Specifics
   include_tasks: customer_app.yml
   loop: "{{ customers }}"
   loop_control:
-    label: "{{ item.name }}"
-    
+    loop_var: customer
+  when: "target_customers is not defined or customer.name in target_customers"  
+  tags: conf

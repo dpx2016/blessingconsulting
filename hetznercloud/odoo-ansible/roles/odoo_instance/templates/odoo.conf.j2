@@ -1,37 +1,44 @@
 [options]
 admin_passwd = {{ admin_password | default('admin') }}
 db_host = {{ db_host_internal }}
-db_user = {{ item.db_user }}
-db_password = {{ item.db_password }}
-db_name = {{ item.db_name }}
-dbfilter = ^{{ item.name }}$
+db_user = {{ customer.db_user }}
+db_password = {{ customer.db_password }}
+db_name = {{ customer.db_name }}
+db_port = {{ pgbouncer_port }}
+dbfilter = ^{{ customer.db_name }}$
 list_db = False # TODO
 
 # Custom Paths
-data_dir = {{ data_folder }}/filestore/{{ item.name }}
-logfile = {{ data_folder }}/logs/{{ item.name }}.log
+data_dir = {{ data_folder }}/filestore/{{ customer.name }}
+logfile = {{ data_folder }}/logs/{{ customer.name }}.log
+pidfile = {{ app_folder }}/conf/{{ customer.name }}.pid
 
 # Networking
-http_port = {{ item.port }}
-gevent_port = {{ item.port + 1000 }}
+http_port = {{ customer.port }}
+# gevent_port = {{ customer.port + 1000 }}
+longpolling_port = {{ customer.port + 1000 }}
 proxy_mode = True
-xmllrpc_interface = 0.0.0.0
+http_interface = 0.0.0.0
 
 # Addons
-addons_path = {{ app_folder }}/source/addons,{{ app_folder }}/custom/{{ item.name }}
+addons_path = {{ app_folder }}/source/addons,{{ app_folder }}/custom/{{ customer.name }}
+without_demo = all
 
 # FreeIPA / LDAP Integration logic
 # Note: LDAP configuration is usually finalized inside the Odoo UI via auth_ldap module,
 # but these settings ensure the server is ready.
-ldap_server = "{{ ldap_server }}"
-ldap_base = "{{ ldap_base_dn }}"
+# ldap_server = "{{ ldap_server }}"
+# ldap_base = "{{ ldap_base_dn }}"
 
 workers = {{ odoo_workers }}
 max_cron_threads = 1
 
 # Performance Tuning
-limit_memory_hard = 1677721600
-limit_memory_soft = 629145600
-limit_request = 8192
+
+; --- Memory Safety (Per Instance) ---
+limit_memory_hard = 1342177280
+limit_memory_soft = 1073741824
 limit_time_cpu = 600
 limit_time_real = 1200
+limit_time_real_signals = 1200
+limit_request = 8192

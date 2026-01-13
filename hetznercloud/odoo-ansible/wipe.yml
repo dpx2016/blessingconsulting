@@ -1,0 +1,5 @@
+---
+
+- import_playbook: wipe_data.yml
+- import_playbook: wipe_apps.yml
+- import_playbook: drop_db.yml

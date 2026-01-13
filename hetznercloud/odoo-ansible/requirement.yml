@@ -1,0 +1,74 @@
+---
+
+- name: Install requirements
+  hosts: all
+  become: true
+  become_user: root
+  gather_facts: false
+  vars_files:
+    - group_vars/vault.yml  
+    
+  tasks:
+  - name: Install System requirements
+    apt:
+      name:
+        - cifs-utils
+      state: present
+      update_cache: yes
+
+  - name: Ensure credentials path exists
+    file:
+      path: "{{ creds_addons }}"
+      state: directory
+      owner: root
+      group: root
+      mode: '0700'
+
+  - name: Create CIFS credentials file
+    copy:
+      dest: "{{ creds_addons }}/{{ odoo_user }}"
+      owner: root
+      group: root
+      mode: '0600'
+      content: |
+        username={{ cifs_username }}
+        password={{ cifs_password }}
+
+  - name: Load CIFS kernel module
+    community.general.modprobe:
+      name: cifs
+      state: present
+
+  - name: Disable CIFS oplock persistently
+    copy:
+      dest: /etc/sysctl.d/99-cifs-oplock.conf
+      content: fs.cifs.OplockEnabled = 0
+
+  - name: Apply sysctl configuration
+    command: sysctl --system
+    changed_when: false
+
+  - name: Ensure mount directory exists
+    file:
+      path: "{{ share.mount_point }}"
+      state: directory
+      owner: root
+      group: root
+      mode: '0755'
+    loop: "{{ shares }}"  
+    loop_control:
+      loop_var: share
+
+  - name: Mount shares
+    mount:
+      src: "{{ share.src }}"
+      path: "{{ share.mount_point }}"
+      fstype: "{{ share.type }}"
+      opts: "{{ share.opts }}"
+      state: mounted
+    loop: "{{ shares }}"  
+    loop_control:
+      loop_var: share
+   
+
+ 

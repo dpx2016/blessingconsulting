@@ -1,0 +1,4 @@
+- name: Stop Odoo service {{ customer.name }}
+  service:
+    name: "odoo@{{ customer.name }}"
+    state: stopped

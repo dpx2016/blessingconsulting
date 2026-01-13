@@ -1,0 +1,14 @@
+---
+- name: Deploy Odoo App Instances
+  hosts: odoo-app1
+  become: yes
+  tasks:
+    - name: Init DB customer
+      include_role:
+        name: init_db
+      loop: "{{ customers }}"
+      loop_control:
+        loop_var: customer
+      when: "target_customers is not defined or customer.name in target_customers"   
+
+# ansible-playbook -i inventory/ init_odoo_db.yml -e "target_customers=['classic_yaounde']"

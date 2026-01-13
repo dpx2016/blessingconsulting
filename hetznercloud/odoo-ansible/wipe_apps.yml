@@ -1,0 +1,8 @@
+---
+- name: Wipe app folder
+  hosts: "{{ ansible_limit }}"
+  tasks:
+    - name: Remove app_folder
+      file:
+        path: "{{ app_folder }}"
+        state: absent

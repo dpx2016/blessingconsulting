@@ -1,0 +1,3 @@
+{% for row in pg_users_secrets.query_result %}
+"{{ row.usename }}" "{{ row.passwd }}"
+{% endfor %}

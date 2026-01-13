@@ -1,0 +1,9 @@
+---
+- name: Deploy Odoo App Addons
+  hosts: odoo_apps
+  become: yes
+  tasks:
+
+    - name: Install Odoo addons
+      include_role:
+        name: odoo_addons

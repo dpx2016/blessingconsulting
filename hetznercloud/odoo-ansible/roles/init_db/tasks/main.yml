@@ -1,0 +1,43 @@
+# - name: Check if database is already initialized {{ customer.db_name }}
+#   ansible.builtin.stat:
+#     path: "{{ app_folder }}/conf/{{ customer.db_name }}.initialized"
+#   register: db_check
+#   run_once: true
+#   when: customer.db_init_data in ['present', 'create']  
+# 
+# - debug:
+#     var: db_check.stat.exists
+# 
+# - name: Report database status
+#   ansible.builtin.debug:
+#     msg: >-
+#       {% if db_check.stat.exists %}
+#         Database '{{ customer.db_name }}' is already initialized.
+#       {% elif customer.db_init_data in ['present', 'create'] %}
+#         Database '{{ customer.db_name }}' will be initialized now.
+#       {% else %}
+#         Database '{{ customer.db_name }}' will NOT be initialized (db_init_data={{ customer.db_init_data }}).
+#       {% endif %}
+#   run_once: true
+
+- name: Stop Odoo Instance {{ customer.name }}
+  systemd:
+    name: "odoo@{{ customer.name }}"
+    state: stopped
+
+- name: Initialize empty database for customer {{ customer.name }}
+  become_user: "{{ odoo_user }}"
+  command:
+    cmd: "{{ app_folder }}/venv/bin/python3 {{ app_folder }}/source/odoo-bin -c {{ app_folder }}/conf/{{ customer.name }}.conf -d {{ customer.db_name }} --init=base --stop-after-init"
+    # creates: "{{ app_folder }}/conf/{{ customer.db_name }}.initialized"
+  register: db_init_result
+#  when:
+#    - not db_check.stat.exists
+#    - customer.db_init_data in ['present', 'create']
+
+# - name: Create initialization marker file for {{ customer.db_name }}
+#  file:
+#    path: "{{ app_folder }}/conf/{{ customer.db_name }}.initialized"
+#    state: touch
+#    owner: "{{ odoo_user }}"
+#  when: db_init_result.changed and customer.db_init_data in ['present', 'create']

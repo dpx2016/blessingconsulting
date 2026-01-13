@@ -1,0 +1,36 @@
+- name: Deploy SFTPGo with FreeIPA Auth
+  hosts: metrics
+  become: yes
+  vars:
+    # stacktonic.sftpgo configuration
+    sftpgo_config:
+      plugins:
+        - name: auth
+          type: auth
+          # Ensure the auth plugin binary is present on the system
+
+          cmd: /usr/local/bin/sftpgo-plugin-auth
+          args: ["serve"]
+
+  roles:
+    - role: sftpgo
+
+  tasks:
+    - name: Configure LDAP Environment Variables
+      lineinfile:
+        path: /etc/sftpgo/sftpgo.env
+        line: "{{ item }}"
+        create: yes
+      loop:
+        - "SFTPGO_PLUGIN_AUTH_LDAP_URL=ldaps://{{ ldap_server }}:636"
+        - "SFTPGO_PLUGIN_AUTH_LDAP_BASE_DN={{ ldap_base_dn }}"
+        - "SFTPGO_PLUGIN_AUTH_LDAP_BIND_DN={{ ldap_bind_dn }}"
+        - "SFTPGO_PLUGIN_AUTH_LDAP_PASSWORD={{ ldap_bind_password }}"
+        - "SFTPGO_PLUGIN_AUTH_LDAP_SEARCH_QUERY={{ ldap_search_query }}"
+      notify: Restart SFTPGo
+
+  handlers:
+    - name: Restart SFTPGo
+      systemd:
+        name: sftpgo
+        state: restarted

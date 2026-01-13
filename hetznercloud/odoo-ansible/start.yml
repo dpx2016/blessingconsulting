@@ -1,0 +1,17 @@
+---
+- name: Start Odoo customers
+  hosts: odoo_apps
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Start Odoo per customer
+      include_tasks:
+        file: start_odoo_instance.yml
+        apply:
+          tags:
+            - start
+      loop: "{{ customers }}"
+      loop_control:
+        loop_var: customer
+      when: "target_customers is not defined or customer.name in target_customers"  

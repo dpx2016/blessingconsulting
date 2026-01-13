@@ -1,0 +1,4 @@
+---
+
+- import_playbook: deploy_customer_db.yml
+- import_playbook: deploy_odoo.yml

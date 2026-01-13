@@ -1,16 +1,20 @@
 ---
-- name: Create PostgreSQL users for customer {{ item.name }}
+- name: Create PostgreSQL users for customer {{ customer.name }}
   community.postgresql.postgresql_user:
-    name: "{{ item.db_user }}"
-    password: "{{ item.db_password }}"
+    name: "{{ customer.db_user }}"
+    password: "{{ customer.db_password }}"
     role_attr_flags: "NOSUPERUSER,CREATEDB"
   become: yes
   become_user: postgres
+  when: "target_customers is not defined or customer.name in target_customers"  
 
-- name: Create PostgreSQL databases for customer {{ item.name }}
+- name: Create PostgreSQL databases for customer {{ customer.name }}
   community.postgresql.postgresql_db:
-    name: "{{ item.db_name }}"
-    owner: "{{ item.db_user }}"
+    name: "{{ customer.db_name }}"
+    owner: "{{ customer.db_user }}"
     encoding: "UTF-8"
   become: yes
   become_user: postgres
+  when: 
+    - create_db_do | bool
+    - target_customers is not defined or customer.name in target_customers

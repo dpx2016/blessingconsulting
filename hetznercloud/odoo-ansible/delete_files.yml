@@ -1,0 +1,24 @@
+- name: Delete all files in a directory
+  hosts: odoo-app1
+  tasks:
+
+  - name: Expand the glob pattern to get a list of directories
+    ansible.builtin.shell: "ls -d {{ delete_path }}"
+    register: expanded_paths
+    failed_when: false # Prevents failing if no directories match
+    changed_when: false
+
+  - name: Find files in the expanded paths
+    ansible.builtin.find:
+      paths: "{{ expanded_paths.stdout_lines }}"
+      file_type: file
+      recurse: yes
+    register: files_to_delete
+    when: expanded_paths.stdout_lines | length > 0
+
+  - name: Remove the files
+    ansible.builtin.file:
+      path: "{{ item.path }}"
+      state: absent
+    loop: "{{ files_to_delete.files }}"
+    when: files_to_delete.matched > 0

@@ -83,6 +83,8 @@ write_files:
             addresses:
               - 10.0.1.5/32
             routes:
+              - to: 10.0.0.1/32
+                scope: link            
               - to: default
                 via: 10.0.0.1
                 on-link: true

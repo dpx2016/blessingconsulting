@@ -1,10 +1,10 @@
 - name: Provision PostgreSQL Databases
   hosts: odoo_db
   become: yes
-  vars_files:
-    - inventory/group_vars/odoo_apps.yml  
   tasks:
     - name: Run Postgres Setup for customers
       include_role:
         name: customer_db
-      loop: "{{ customers }}"  
+      loop: "{{ customers }}"
+      loop_control:
+        loop_var: customer

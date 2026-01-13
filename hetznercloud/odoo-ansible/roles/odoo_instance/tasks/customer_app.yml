@@ -1,51 +1,38 @@
 ---
-- name: Create Customer Filestore {{ item.name }}
+- name: Stopped Odoo Instance {{ customer.name }}
+  systemd:
+    name: "odoo@{{ customer.name }}"
+    state: stopped
+    enabled: yes
+
+- name: Create Customer Filestore {{ customer.name }}
   file:
-    path: "{{ data_folder }}/filestore/{{ item.name }}"
+    path: "{{ data_folder }}/filestore/{{ customer.name }}"
     state: directory
     owner: "{{ odoo_user }}"
     group: "{{ odoo_group }}"
 
-- name: Create Customer Custom addons Directory {{ item.name }}
+- name: Create Customer Custom addons Directory {{ customer.name }}
   file:
-    path: "{{ app_folder }}/custom/{{ item.name }}"
+    path: "{{ app_folder }}/custom/{{ customer.name }}"
     state: directory
     owner: "{{ odoo_user }}"
     group: "{{ odoo_group }}"
+    mode: "0755"
 
-- name: Generate Odoo Config {{ item.name }}
+- name: Generate Odoo Config {{ customer.name }}
   template:
     src: odoo.conf.j2
-    dest: "{{ app_folder }}/conf/{{ item.name }}.conf"
+    dest: "{{ app_folder }}/conf/{{ customer.name }}.conf"
     owner: "{{ odoo_user }}"
     group: "{{ odoo_group }}"
     mode: '0640'
+    backup: yes
+  tags: conf
 
-- name: Check if database is already initialized {{ item.name }}
-  stat:
-    path: "{{ app_folder }}/conf/{{ item.name }}.initialized"
-  register: db_check
-
-- name: Stop Odoo Instance {{ item.name }}
+- name: Start Odoo Instance {{ customer.name }}
   systemd:
-    name: "odoo@{{ item.name }}"
-    state: stopped
-  when: not db_check.stat.exists
-
-- name: Initialize empty database for customer {{ item.name }}
-  command: >
-    {{ app_folder }}/venv/bin/python3 {{ app_folder }}/source/odoo-bin 
-    -c {{ app_folder }}/conf/{{ item.name }}.conf
-    -d {{ item.db_name }}
-    --init=base
-    --stop-after-init
-  become_user: "{{ odoo_user }}"
-  args:
-    creates: "{{ app_folder }}/conf/{{ item.name }}.initialized"
-  when: not db_check.stat.exists
-
-- name: Start Odoo Instance {{ item.name }}
-  systemd:
-    name: "odoo@{{ item.name }}"
-    state: restarted
+    name: "odoo@{{ customer.name }}"
+    state: started
     enabled: yes
+  tags: conf
